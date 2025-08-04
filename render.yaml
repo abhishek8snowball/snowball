@@ -52,7 +52,7 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: FRONTEND_URL
-        value: https://snowball-frontend.onrender.com
+        value: https://snowball-land.onrender.com
       - key: PUPPETEER_EXECUTABLE_PATH
         value: /usr/bin/google-chrome-stable
 
@@ -65,4 +65,4 @@ services:
     staticPublishPath: ./frontend/dist
     envVars:
       - key: VITE_API_URL
-        value: https://snowball-backend.onrender.com 
+        value: https://snowball-u411.onrender.com 
