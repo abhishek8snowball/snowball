@@ -11,6 +11,7 @@ class WebsiteScraper {
     if (!this.browser) {
       this.browser = await puppeteer.launch({
         headless: true,
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
@@ -18,7 +19,42 @@ class WebsiteScraper {
           '--disable-accelerated-2d-canvas',
           '--no-first-run',
           '--no-zygote',
-          '--disable-gpu'
+          '--disable-gpu',
+          '--disable-web-security',
+          '--disable-features=VizDisplayCompositor',
+          '--disable-extensions',
+          '--disable-plugins',
+          '--disable-images',
+          '--disable-javascript',
+          '--disable-background-timer-throttling',
+          '--disable-backgrounding-occluded-windows',
+          '--disable-renderer-backgrounding',
+          '--disable-field-trial-config',
+          '--disable-ipc-flooding-protection',
+          '--disable-hang-monitor',
+          '--disable-prompt-on-repost',
+          '--disable-client-side-phishing-detection',
+          '--disable-component-extensions-with-background-pages',
+          '--disable-default-apps',
+          '--disable-sync',
+          '--disable-translate',
+          '--hide-scrollbars',
+          '--mute-audio',
+          '--no-default-browser-check',
+          '--safebrowsing-disable-auto-update',
+          '--disable-background-networking',
+          '--disable-default-apps',
+          '--disable-extensions',
+          '--disable-sync',
+          '--disable-translate',
+          '--hide-scrollbars',
+          '--metrics-recording-only',
+          '--mute-audio',
+          '--no-first-run',
+          '--safebrowsing-disable-auto-update',
+          '--ignore-certificate-errors',
+          '--ignore-ssl-errors',
+          '--ignore-certificate-errors-spki-list'
         ]
       });
     }
@@ -33,8 +69,10 @@ class WebsiteScraper {
 
   async scrapeWebsite(url) {
     try {
-      await this.init();
-      const page = await this.browser.newPage();
+      // Try Puppeteer first
+      try {
+        await this.init();
+        const page = await this.browser.newPage();
       
       // Set user agent to avoid blocking
       await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
@@ -114,14 +152,19 @@ class WebsiteScraper {
       // Get accessibility score
       const accessibilityScore = await this.getAccessibilityScore(page);
 
-      await page.close();
-      
-      return {
-        ...seoData,
-        performance: performanceMetrics,
-        mobileScore,
-        accessibilityScore
-      };
+        await page.close();
+        
+        return {
+          ...seoData,
+          performance: performanceMetrics,
+          mobileScore,
+          accessibilityScore
+        };
+        
+      } catch (puppeteerError) {
+        console.log('⚠️ Puppeteer failed, falling back to axios:', puppeteerError.message);
+        return await this.scrapeWithAxios(url);
+      }
       
     } catch (error) {
       console.error('❌ Error scraping website:', error);
@@ -208,6 +251,84 @@ class WebsiteScraper {
     } catch (error) {
       console.error('❌ Error getting mobile responsiveness score:', error);
       return { score: 0, issues: [] };
+    }
+  }
+
+  async scrapeWithAxios(url) {
+    try {
+      console.log(`🌐 Scraping with axios fallback: ${url}`);
+      
+      const response = await axios.get(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        },
+        timeout: 30000
+      });
+      
+      const html = response.data;
+      const $ = cheerio.load(html);
+
+      // Extract basic SEO data
+      const seoData = {
+        url: url,
+        title: $('title').text().trim(),
+        metaDescription: $('meta[name="description"]').attr('content') || '',
+        metaKeywords: $('meta[name="keywords"]').attr('content') || '',
+        canonical: $('link[rel="canonical"]').attr('href') || '',
+        robots: $('meta[name="robots"]').attr('content') || '',
+        viewport: $('meta[name="viewport"]').attr('content') || '',
+        charset: $('meta[charset]').attr('charset') || $('meta[http-equiv="Content-Type"]').attr('content') || '',
+        
+        // Headings
+        h1Count: $('h1').length,
+        h2Count: $('h2').length,
+        h3Count: $('h3').length,
+        h4Count: $('h4').length,
+        h5Count: $('h5').length,
+        h6Count: $('h6').length,
+        
+        // Images
+        imageCount: $('img').length,
+        imagesWithoutAlt: $('img:not([alt])').length,
+        
+        // Links
+        linkCount: $('a').length,
+        internalLinks: $('a[href^="/"], a[href^="' + url + '"]').length,
+        externalLinks: $('a[href^="http"]').length,
+        
+        // Content
+        wordCount: $('body').text().trim().split(/\s+/).length,
+        
+        // Schema markup
+        hasSchema: $('[itemtype]').length > 0 || $('script[type="application/ld+json"]').length > 0,
+        
+        // Social media
+        hasOpenGraph: $('meta[property^="og:"]').length > 0,
+        hasTwitterCard: $('meta[name^="twitter:"]').length > 0,
+        
+        // Performance indicators
+        scriptCount: $('script').length,
+        cssCount: $('link[rel="stylesheet"]').length,
+        
+        // Accessibility
+        hasLang: $('html[lang]').length > 0,
+        hasSkipLink: $('a[href^="#"]').filter((i, el) => $(el).text().toLowerCase().includes('skip')).length > 0,
+        
+        // Mobile responsiveness indicators
+        hasViewport: $('meta[name="viewport"]').length > 0,
+        hasResponsiveCSS: $('link[rel="stylesheet"][media*="max-width"]').length > 0 || $('link[rel="stylesheet"][media*="min-width"]').length > 0,
+      };
+
+      return {
+        ...seoData,
+        performance: {},
+        mobileScore: { score: 0, issues: [] },
+        accessibilityScore: { score: 0, issues: [] }
+      };
+      
+    } catch (error) {
+      console.error('❌ Error scraping with axios:', error);
+      throw error;
     }
   }
 

@@ -6,7 +6,7 @@ import { FaEye } from "react-icons/fa6";
 import { FaEyeSlash } from "react-icons/fa6";
 import "../styles/Login.css";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
+import { apiService } from "../utils/api";
 import { toast } from "react-toastify";
 
 const Login = () => {
@@ -27,16 +27,13 @@ const Login = () => {
         password,
       };
       try {
-        const response = await axios.post(
-          "https://seo-meta.onrender.com/api/v1/login",
-          formData
-        );
+        const response = await apiService.login(formData);
         localStorage.setItem('auth', JSON.stringify(response.data.token));
-        toast.success("Login successfull");
+        toast.success("Login successful");
         navigate("/dashboard");
       } catch (err) {
         console.log(err);
-        toast.error(err.message);
+        toast.error(err.response?.data?.msg || err.message);
       }
     } else {
       toast.error("Please fill all inputs");

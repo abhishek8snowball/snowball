@@ -6,7 +6,7 @@ import { FaEye } from "react-icons/fa6";
 import { FaEyeSlash } from "react-icons/fa6";
 import "../styles/Register.css";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
+import { apiService } from "../utils/api";
 import { toast } from "react-toastify";
 
 
@@ -35,11 +35,11 @@ const Login = () => {
           password
         };
         try{
-        const response = await axios.post("https://seo-meta.onrender.com/api/v1/register", formData);
-         toast.success("Registration successfull");
+        const response = await apiService.register(formData);
+         toast.success("Registration successful");
          navigate("/login");
        }catch(err){
-         toast.error(err.message);
+         toast.error(err.response?.data?.msg || err.message);
        }
       }else{
         toast.error("Passwords don't match");

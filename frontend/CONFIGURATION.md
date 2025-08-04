@@ -8,7 +8,7 @@ Create a `.env` file in the frontend directory with the following content:
 
 ```env
 # API Configuration
-VITE_API_URL=http://localhost:3000
+VITE_API_URL=https://snowball-u41l.onrender.com
 
 # Optional: Enable debug logging
 VITE_DEBUG=false
@@ -19,7 +19,7 @@ VITE_DEBUG=false
 The `VITE_API_URL` should point to your backend server:
 
 - **Development**: `http://localhost:3000`
-- **Production**: `https://your-domain.com`
+- **Production**: `https://snowball-u41l.onrender.com`
 - **Staging**: `https://staging.your-domain.com`
 
 ### 3. API Endpoints
@@ -118,7 +118,7 @@ VITE_DEBUG=true
 
 #### Production
 ```env
-VITE_API_URL=https://your-api-domain.com
+VITE_API_URL=https://snowball-u41l.onrender.com
 VITE_DEBUG=false
 ```
 

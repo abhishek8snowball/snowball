@@ -2,7 +2,7 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 
 // API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://snowball-u41l.onrender.com';
 
 console.log('API Base URL:', API_BASE_URL);
 
@@ -66,6 +66,10 @@ api.interceptors.response.use(
 
 // API methods
 export const apiService = {
+  // Authentication
+  login: (data) => api.post('/api/v1/login', data),
+  register: (data) => api.post('/api/v1/register', data),
+  
   // Dashboard
   getDashboard: () => api.get('/api/v1/dashboard'),
   
