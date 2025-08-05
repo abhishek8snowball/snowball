@@ -148,7 +148,10 @@ exports.getPromptResponse = async (req, res) => {
     const response = await PromptAIResponse.findOne({ promptId })
       .sort({ runAt: -1 }); // Get the most recent response
 
-    console.log(`✅ Found AI response for prompt ${promptId}`);
+    console.log(`🔍 AI response query result for prompt ${promptId}:`, response ? 'Found' : 'Not found');
+    if (response) {
+      console.log(`📝 Response text preview: "${response.responseText.substring(0, 100)}..."`);
+    }
     
     res.json({
       prompt: {
@@ -165,5 +168,39 @@ exports.getPromptResponse = async (req, res) => {
   } catch (error) {
     console.error("❌ Error fetching prompt response:", error);
     res.status(500).json({ msg: "Failed to fetch prompt response", error: error.message });
+  }
+};
+
+// Debug endpoint to check AI responses in database
+exports.debugAIResponses = async (req, res) => {
+  try {
+    const PromptAIResponse = require("../models/PromptAIResponse");
+    const CategorySearchPrompt = require("../models/CategorySearchPrompt");
+    
+    const totalResponses = await PromptAIResponse.countDocuments();
+    const totalPrompts = await CategorySearchPrompt.countDocuments();
+    
+    console.log(`🔍 Debug: ${totalResponses} AI responses, ${totalPrompts} prompts in database`);
+    
+    // Get a sample of recent responses
+    const recentResponses = await PromptAIResponse.find()
+      .sort({ runAt: -1 })
+      .limit(5)
+      .populate('promptId', 'promptText');
+    
+    res.json({
+      totalResponses,
+      totalPrompts,
+      recentResponses: recentResponses.map(r => ({
+        id: r._id,
+        promptId: r.promptId,
+        promptText: r.promptId?.promptText || 'Unknown',
+        responsePreview: r.responseText.substring(0, 100) + '...',
+        runAt: r.runAt
+      }))
+    });
+  } catch (error) {
+    console.error("❌ Error in debug endpoint:", error);
+    res.status(500).json({ msg: "Debug failed", error: error.message });
   }
 };

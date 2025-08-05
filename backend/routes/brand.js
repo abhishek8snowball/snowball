@@ -20,4 +20,7 @@ router.get("/categories/:categoryId/prompts", auth, brandController.getCategoryP
 // Prompt response endpoint
 router.get("/prompts/:promptId/response", auth, brandController.getPromptResponse);
 
+// Debug endpoint
+router.get("/debug/ai-responses", auth, brandController.debugAIResponses);
+
 module.exports = router;

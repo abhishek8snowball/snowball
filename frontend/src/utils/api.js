@@ -89,6 +89,9 @@ export const apiService = {
   getCategoryPrompts: (categoryId) => api.get(`/api/v1/brand/categories/${categoryId}/prompts`),
   getPromptResponse: (promptId) => api.get(`/api/v1/brand/prompts/${promptId}/response`),
   
+  // Debug
+  debugAIResponses: () => api.get('/api/v1/brand/debug/ai-responses'),
+  
   // History
   getHistory: () => api.get('/api/v1/history'),
   deleteHistory: (id) => api.delete(`/api/v1/history/${id}`),

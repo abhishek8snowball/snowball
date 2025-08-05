@@ -85,11 +85,34 @@ exports.analyzeBrand = async (req, res) => {
     try {
       // Delete existing prompts and regenerate with real competitors
       const CategorySearchPrompt = require("../../models/CategorySearchPrompt");
+      const PromptAIResponse = require("../../models/PromptAIResponse");
+      
+      // Store old prompt IDs to clean up orphaned responses
+      const oldPromptIds = [];
       for (const catDoc of catDocs) {
+        const oldPrompts = await CategorySearchPrompt.find({ categoryId: catDoc._id });
+        oldPromptIds.push(...oldPrompts.map(p => p._id));
         await CategorySearchPrompt.deleteMany({ categoryId: catDoc._id });
       }
+      
+      // Delete orphaned AI responses
+      if (oldPromptIds.length > 0) {
+        await PromptAIResponse.deleteMany({ promptId: { $in: oldPromptIds } });
+        console.log(`🗑️ Deleted ${oldPromptIds.length} orphaned AI responses`);
+      }
+      
       prompts = await generateAndSavePrompts(openai, catDocs, brand, competitors);
       console.log("✅ Prompts regenerated with real competitors:", prompts.length, "prompts");
+      
+      // Regenerate AI responses for the new prompts
+      console.log("🔄 Regenerating AI responses for new prompts...");
+      const newAiResponses = await runPromptsAndSaveResponses(openai, prompts);
+      console.log("✅ AI responses regenerated:", newAiResponses.length, "responses");
+      
+      // Update the aiResponses variable for Share of Voice calculation
+      aiResponses.length = 0; // Clear the array
+      aiResponses.push(...newAiResponses); // Add new responses
+      
     } catch (error) {
       console.error("❌ Error regenerating prompts with competitors:", error);
       // Keep existing prompts if regeneration fails
