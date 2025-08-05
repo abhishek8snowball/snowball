@@ -8,6 +8,7 @@ import ShareOfVoiceTable from "./ShareOfVoiceTable";
 import SEOAudit from "./SEOAudit";
 import CompetitorsAnalysis from "./CompetitorsAnalysis";
 import CategoriesWithPrompts from "./CategoriesWithPrompts";
+import BlogAnalysis from "../components/BlogAnalysis";
 
 const DomainAnalysis = ({ onClose }) => {
   const [domain, setDomain] = useState("");
@@ -338,10 +339,16 @@ const DomainAnalysis = ({ onClose }) => {
           {/* Categories with Prompts - Full Width */}
           {result.categories && Array.isArray(result.categories) && result.categories.length > 0 && (
             <div className="mt-6">
-              <CategoriesWithPrompts 
-                categories={result.categories}
-                brandId={result.brandId}
-              />
+                      <CategoriesWithPrompts 
+          categories={result.categories} 
+          brandId={result.brandId} 
+        />
+        
+        <BlogAnalysis 
+          brandId={result.brandId}
+          domain={result.domain}
+          blogAnalysis={result.blogAnalysis}
+        />
             </div>
           )}
 

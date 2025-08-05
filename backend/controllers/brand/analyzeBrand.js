@@ -165,6 +165,18 @@ exports.analyzeBrand = async (req, res) => {
       brandDescription = `Analysis of ${brand.brandName} (${brand.domain})`;
     }
 
+    // 11. Blog Analysis
+    console.log("📝 Step 11: Extracting top blogs...");
+    let blogAnalysis = { blogs: [] };
+    try {
+      const { extractAndSaveBlogs } = require("./blogAnalysis");
+      blogAnalysis = await extractAndSaveBlogs(brand);
+      console.log("✅ Blog analysis completed:", blogAnalysis.blogs.length, "blogs");
+    } catch (error) {
+      console.error("❌ Error in blog analysis:", error);
+      blogAnalysis = { blogs: [] };
+    }
+
     console.log("=== 🎉 Brand Analysis Complete ===");
     console.log("📊 Final Results Summary:");
     console.log("   - Brand:", brand.brandName);
@@ -172,6 +184,7 @@ exports.analyzeBrand = async (req, res) => {
     console.log("   - Competitors:", competitors.length);
     console.log("   - SEO Issues:", seoAudit.issues?.length || 0);
     console.log("   - Share of Voice:", sovResult.brandShare || 0, "%");
+    console.log("   - Blogs Extracted:", blogAnalysis.blogs?.length || 0);
 
     res.json({
       brand: brand.brandName,
@@ -185,6 +198,7 @@ exports.analyzeBrand = async (req, res) => {
       totalMentions: sovResult.totalMentions,
       brandShare: sovResult.brandShare,
       seoAudit,
+      blogAnalysis, // Add blog analysis results
       status: "Analysis complete."
     });
   } catch (err) {

@@ -23,4 +23,7 @@ router.get("/prompts/:promptId/response", auth, brandController.getPromptRespons
 // Debug endpoint
 router.get("/debug/ai-responses", auth, brandController.debugAIResponses);
 
+// Blog analysis endpoint
+router.get("/:brandId/blogs", auth, brandController.getBlogAnalysis);
+
 module.exports = router;

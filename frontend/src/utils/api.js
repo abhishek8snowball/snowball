@@ -92,6 +92,9 @@ export const apiService = {
   // Debug
   debugAIResponses: () => api.get('/api/v1/brand/debug/ai-responses'),
   
+  // Blog Analysis
+  getBlogAnalysis: (brandId) => api.get(`/api/v1/brand/${brandId}/blogs`),
+  
   // History
   getHistory: () => api.get('/api/v1/history'),
   deleteHistory: (id) => api.delete(`/api/v1/history/${id}`),
