@@ -107,3 +107,63 @@ exports.getCategoryPrompts = async (req, res) => {
     res.status(500).json({ msg: "Failed to fetch category prompts", error: error.message });
   }
 };
+
+// Get AI response for a specific prompt
+exports.getPromptResponse = async (req, res) => {
+  try {
+    const { promptId } = req.params;
+    const userId = req.user.id;
+    
+    console.log(`🔍 Fetching AI response for promptId: ${promptId} for user: ${userId}`);
+    
+    if (!promptId) {
+      console.log('❌ Prompt ID is missing');
+      return res.status(400).json({ msg: "Prompt ID is required" });
+    }
+
+    // Check if promptId is a valid ObjectId
+    if (!require('mongoose').Types.ObjectId.isValid(promptId)) {
+      console.log('❌ Invalid ObjectId format:', promptId);
+      return res.status(400).json({ msg: "Invalid prompt ID format" });
+    }
+
+    // First, get the prompt to validate ownership
+    const CategorySearchPrompt = require("../models/CategorySearchPrompt");
+    const prompt = await CategorySearchPrompt.findById(promptId);
+    
+    if (!prompt) {
+      return res.status(404).json({ msg: "Prompt not found" });
+    }
+
+    // Validate category ownership using utility function
+    const { validateCategoryOwnership } = require("../utils/brandValidation");
+    const category = await validateCategoryOwnership(userId, prompt.categoryId);
+
+    if (!category) {
+      return res.status(403).json({ msg: "Access denied: You don't have permission to access this prompt" });
+    }
+
+    // Now fetch the AI response for the prompt
+    const PromptAIResponse = require("../models/PromptAIResponse");
+    const response = await PromptAIResponse.findOne({ promptId })
+      .sort({ runAt: -1 }); // Get the most recent response
+
+    console.log(`✅ Found AI response for prompt ${promptId}`);
+    
+    res.json({
+      prompt: {
+        id: prompt._id,
+        text: prompt.promptText,
+        categoryId: prompt.categoryId
+      },
+      response: response ? {
+        id: response._id,
+        text: response.responseText,
+        runAt: response.runAt
+      } : null
+    });
+  } catch (error) {
+    console.error("❌ Error fetching prompt response:", error);
+    res.status(500).json({ msg: "Failed to fetch prompt response", error: error.message });
+  }
+};

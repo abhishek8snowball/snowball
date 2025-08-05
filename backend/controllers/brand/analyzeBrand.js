@@ -42,12 +42,13 @@ exports.analyzeBrand = async (req, res) => {
     const catDocs = await saveCategories(brand, categories);
     console.log("✅ Categories saved:", catDocs.length, "categories");
 
-    // 3. Prompts
+    // 3. Prompts (will be updated with competitors after Step 7)
     console.log("🤖 Step 3: Generating prompts...");
     let prompts = [];
     try {
+      // Initially generate prompts without competitors (will be updated later)
       prompts = await generateAndSavePrompts(openai, catDocs, brand);
-      console.log("✅ Prompts generated:", prompts.length, "prompts");
+      console.log("✅ Initial prompts generated:", prompts.length, "prompts");
     } catch (error) {
       console.error("❌ Error generating prompts:", error);
       prompts = [];
@@ -77,6 +78,21 @@ exports.analyzeBrand = async (req, res) => {
     } catch (error) {
       console.error("❌ Error extracting competitors:", error);
       competitors = ["competitor1", "competitor2", "competitor3"]; // Fallback
+    }
+
+    // 7.5. Regenerate prompts with real competitors
+    console.log("🔄 Step 7.5: Regenerating prompts with real competitors...");
+    try {
+      // Delete existing prompts and regenerate with real competitors
+      const CategorySearchPrompt = require("../../models/CategorySearchPrompt");
+      for (const catDoc of catDocs) {
+        await CategorySearchPrompt.deleteMany({ categoryId: catDoc._id });
+      }
+      prompts = await generateAndSavePrompts(openai, catDocs, brand, competitors);
+      console.log("✅ Prompts regenerated with real competitors:", prompts.length, "prompts");
+    } catch (error) {
+      console.error("❌ Error regenerating prompts with competitors:", error);
+      // Keep existing prompts if regeneration fails
     }
 
     // 8. Share of Voice Calculation

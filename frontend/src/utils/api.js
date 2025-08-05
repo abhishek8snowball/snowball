@@ -2,14 +2,14 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 
 // API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://snowball-u41l.onrender.com';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 console.log('API Base URL:', API_BASE_URL);
 
 // Create axios instance with default configuration
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 120000, // 2 minutes timeout for long-running operations
+  timeout: 180000, // 3 minutes timeout for long-running operations (increased for Perplexity API calls)
   headers: {
     'Content-Type': 'application/json',
   },
@@ -73,11 +73,11 @@ export const apiService = {
   // Dashboard
   getDashboard: () => api.get('/api/v1/dashboard'),
   
-  // Brand Analysis - with longer timeout
+  // Brand Analysis - with longer timeout for Perplexity API calls
   analyzeBrand: (data) => {
     console.log('Starting brand analysis with data:', data);
     return api.post('/api/v1/brand/analyze', data, {
-      timeout: 300000, // 5 minutes for domain analysis
+      timeout: 360000, // 6 minutes for domain analysis (increased for Perplexity API calls)
     });
   },
   getBrandRank: () => api.get('/api/v1/brand/rank'),
@@ -87,6 +87,7 @@ export const apiService = {
   
   // Categories and Prompts
   getCategoryPrompts: (categoryId) => api.get(`/api/v1/brand/categories/${categoryId}/prompts`),
+  getPromptResponse: (promptId) => api.get(`/api/v1/brand/prompts/${promptId}/response`),
   
   // History
   getHistory: () => api.get('/api/v1/history'),

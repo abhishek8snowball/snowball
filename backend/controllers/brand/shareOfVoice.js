@@ -19,7 +19,7 @@ async function enrichSourceData(aiResponses, brand, competitors) {
 
   console.log(`🔍 Processing ${aiResponses.length} AI responses for enrichment`);
 
-  // Add AI responses
+  // ONLY AI responses - no simulated data
   for (const { aiDoc } of aiResponses) {
     if (aiDoc && aiDoc.responseText) {
       console.log(`📝 Adding AI response: "${aiDoc.responseText.substring(0, 100)}..."`);
@@ -31,73 +31,12 @@ async function enrichSourceData(aiResponses, brand, competitors) {
     }
   }
 
-  // TODO: Add other sources (Google Search, SEO Data, Social Media, News/Blogs)
-  // This is where you would integrate with external APIs
-  // For now, we'll simulate some additional sources
-  
-  // Simulate Google Search results
-  const simulatedGoogleResults = await simulateGoogleSearch(brand, competitors);
-  enrichedSources.push(...simulatedGoogleResults);
-
-  // Simulate SEO Data
-  const simulatedSEOData = await simulateSEOData(brand, competitors);
-  enrichedSources.push(...simulatedSEOData);
-
-  // Simulate Social Media mentions
-  const simulatedSocialData = await simulateSocialMedia(brand, competitors);
-  enrichedSources.push(...simulatedSocialData);
-
-  console.log(`🔍 Total enriched sources: ${enrichedSources.length}`);
+  console.log(`🔍 Total enriched sources: ${enrichedSources.length} (AI responses only)`);
   return enrichedSources;
 }
 
-// ✅ 3. SOURCE WEIGHTING - Simulate additional data sources
-async function simulateGoogleSearch(brand, competitors) {
-  // Simulate Google search results with more realistic content
-  const searchQueries = [
-    `best ${brand.brandName} alternatives`,
-    `${brand.brandName} vs competitors`,
-    `${brand.brandName} review`,
-    `top ${brand.brandName} competitors`
-  ];
-
-  const simulatedResults = [];
-  for (const query of searchQueries) {
-    const responseText = `Search results for "${query}": ${brand.brandName} is compared with ${competitors.join(', ')} in various articles and reviews. Users often mention ${brand.brandName} alongside ${competitors[0]} and ${competitors[1]} when discussing ${brand.brandName.toLowerCase()} alternatives.`;
-    simulatedResults.push({
-      sourceType: 'googleSearch',
-      responseText: responseText,
-      sourceWeight: 2.0
-    });
-  }
-  return simulatedResults;
-}
-
-async function simulateSEOData(brand, competitors) {
-  // Simulate SEO data from tools like Ahrefs/Semrush
-  const responseText = `SEO analysis shows ${brand.brandName} ranking for key terms alongside ${competitors.join(', ')}. Domain authority and backlink analysis included. ${brand.brandName} competes directly with ${competitors[0]} and ${competitors[1]} in search results.`;
-  return [{
-    sourceType: 'seoData',
-    responseText: responseText,
-    sourceWeight: 2.5
-  }];
-}
-
-async function simulateSocialMedia(brand, competitors) {
-  // Simulate social media mentions
-  return [
-    {
-      sourceType: 'reddit',
-      responseText: `Reddit discussion: Users comparing ${brand.brandName} with ${competitors.join(', ')}. Community feedback and recommendations. Many users prefer ${brand.brandName} over ${competitors[0]} for certain use cases.`,
-      sourceWeight: 3.0
-    },
-    {
-      sourceType: 'twitter',
-      responseText: `Twitter mentions: ${brand.brandName} trending alongside ${competitors.join(', ')}. Social sentiment analysis shows positive mentions of ${brand.brandName} compared to ${competitors[1]}.`,
-      sourceWeight: 3.5
-    }
-  ];
-}
+// ✅ 3. SOURCE WEIGHTING - AI responses only (no simulated data)
+// Removed simulated data functions as Share of Voice now only uses AI responses
 
 // ✅ 4. NLP TOPIC MATCHING
 async function getCategoryKeywords(categoryId) {
@@ -180,11 +119,7 @@ function capOutlierScores(mentions) {
 // Helper function to calculate source breakdown
 function calculateSourceBreakdown(mentions) {
   const breakdown = {
-    openai: 0,
-    googleSearch: 0,
-    seoData: 0,
-    socialMedia: 0,
-    newsBlogs: 0
+    openai: 0  // Only AI responses
   };
 
   mentions.forEach(mention => {
@@ -344,15 +279,9 @@ exports.calculateShareOfVoice = async function(brand, competitors, aiResponses, 
       }
     });
 
-    // ✅ 3. SOURCE WEIGHTING CONFIGURATION
+    // ✅ 3. SOURCE WEIGHTING CONFIGURATION - AI responses only
     const sourceWeights = {
-      openai: 1.0,        // Baseline
-      googleSearch: 2.0,   // Higher weight for real search results
-      seoData: 2.5,        // High weight for SEO data
-      socialMedia: 3.0,    // High weight for social mentions
-      newsBlogs: 2.0,      // Medium-high weight for news
-      reddit: 3.0,         // High weight for community discussions
-      twitter: 3.5         // Very high weight for social engagement
+      openai: 1.0        // Only AI responses are used
     };
 
     // ✅ 4. NLP TOPIC MATCHING - Category keywords
@@ -363,11 +292,7 @@ exports.calculateShareOfVoice = async function(brand, competitors, aiResponses, 
     const mentionDetails = {};
     const allMentions = [];
     const channelBreakdown = {
-      openai: {},
-      google: {},
-      reddit: {},
-      twitter: {},
-      news: {}
+      openai: {}  // Only AI responses
     };
     const coMentions = [];
     const trendData = [];

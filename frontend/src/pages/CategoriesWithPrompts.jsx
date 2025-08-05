@@ -5,6 +5,8 @@ const CategoriesWithPrompts = ({ categories, brandId }) => {
   const [categoryPrompts, setCategoryPrompts] = useState({});
   const [loading, setLoading] = useState(false);
   const [expandedCategory, setExpandedCategory] = useState(null);
+  const [promptResponses, setPromptResponses] = useState({});
+  const [loadingResponses, setLoadingResponses] = useState({});
 
   // Debug logging
   console.log("CategoriesWithPrompts received props:", {
@@ -67,6 +69,41 @@ const CategoriesWithPrompts = ({ categories, brandId }) => {
 
   const handleCategoryClick = (categoryId) => {
     setExpandedCategory(expandedCategory === categoryId ? null : categoryId);
+  };
+
+  const handlePromptClick = async (promptId) => {
+    // If response is already loaded, toggle it
+    if (promptResponses[promptId]) {
+      setPromptResponses(prev => {
+        const newState = { ...prev };
+        delete newState[promptId];
+        return newState;
+      });
+      return;
+    }
+
+    // Set loading state for this specific prompt
+    setLoadingResponses(prev => ({ ...prev, [promptId]: true }));
+
+    try {
+      console.log(`🔍 Fetching response for prompt: ${promptId}`);
+      const response = await apiService.getPromptResponse(promptId);
+      console.log(`✅ Response received for prompt ${promptId}:`, response.data);
+      
+      setPromptResponses(prev => ({
+        ...prev,
+        [promptId]: response.data
+      }));
+    } catch (error) {
+      console.error(`❌ Error fetching response for prompt ${promptId}:`, error);
+      // Set error state
+      setPromptResponses(prev => ({
+        ...prev,
+        [promptId]: { error: 'Failed to load response' }
+      }));
+    } finally {
+      setLoadingResponses(prev => ({ ...prev, [promptId]: false }));
+    }
   };
 
   if (!categories || categories.length === 0) {
@@ -172,10 +209,64 @@ const CategoriesWithPrompts = ({ categories, brandId }) => {
                           categoryPrompts[categoryId].map((prompt, promptIndex) => {
                             const promptText = prompt.promptText || prompt.text || 'No prompt text available';
                             const promptId = prompt._id || prompt.id || `prompt-${promptIndex}`;
+                            const isResponseLoaded = promptResponses[promptId];
+                            const isLoading = loadingResponses[promptId];
                             
                             return (
-                              <div key={promptId} className="bg-gray-50 rounded p-2">
-                                <p className="text-xs text-gray-800">{promptText}</p>
+                              <div key={promptId} className="space-y-2">
+                                <button
+                                  onClick={() => handlePromptClick(promptId)}
+                                  className="w-full text-left bg-gray-50 rounded p-3 hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-inset"
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <p className="text-xs text-gray-800 font-medium">{promptText}</p>
+                                    <div className="flex items-center ml-2">
+                                      {isLoading ? (
+                                        <div className="animate-spin rounded-full h-3 w-3 border-b border-purple-600"></div>
+                                      ) : (
+                                        <svg
+                                          className={`w-4 h-4 text-gray-400 transition-transform ${
+                                            isResponseLoaded ? 'rotate-180' : ''
+                                          }`}
+                                          fill="none"
+                                          viewBox="0 0 24 24"
+                                          stroke="currentColor"
+                                        >
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                      )}
+                                    </div>
+                                  </div>
+                                </button>
+                                
+                                {/* AI Response */}
+                                {isResponseLoaded && (
+                                  <div className="ml-4 bg-blue-50 rounded-lg p-3 border-l-4 border-blue-400">
+                                    <div className="flex items-center mb-2">
+                                      <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2">
+                                        <svg className="w-3 h-3 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                                        </svg>
+                                      </div>
+                                      <span className="text-xs font-medium text-blue-800">AI Response</span>
+                                    </div>
+                                    
+                                    {isResponseLoaded.error ? (
+                                      <p className="text-xs text-red-600">{isResponseLoaded.error}</p>
+                                    ) : isResponseLoaded.response ? (
+                                      <div>
+                                        <p className="text-xs text-gray-700 leading-relaxed mb-2">
+                                          {isResponseLoaded.response.text}
+                                        </p>
+                                        <p className="text-xs text-gray-500">
+                                          Generated: {new Date(isResponseLoaded.response.runAt).toLocaleString()}
+                                        </p>
+                                      </div>
+                                    ) : (
+                                      <p className="text-xs text-gray-500">No response available for this prompt</p>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                             );
                           })

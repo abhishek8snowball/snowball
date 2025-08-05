@@ -17,4 +17,7 @@ router.get("/user/categories", auth, brandController.getUserCategories);
 // Category prompts endpoint
 router.get("/categories/:categoryId/prompts", auth, brandController.getCategoryPrompts);
 
+// Prompt response endpoint
+router.get("/prompts/:promptId/response", auth, brandController.getPromptResponse);
+
 module.exports = router;

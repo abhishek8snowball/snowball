@@ -1,125 +1,35 @@
 const BrandCategory = require("../../models/BrandCategory");
-const WebsiteScraper = require("./websiteScraper");
-const axios = require('axios');
-const cheerio = require('cheerio');
+const PerplexityService = require("../../utils/perplexityService");
 
-// Helper function to extract detailed page content for category analysis
-async function extractPageContent(url) {
-  try {
-    console.log(`📄 Extracting detailed content from: ${url}`);
-    const response = await axios.get(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-      },
-      timeout: 10000
-    });
-    
-    const $ = cheerio.load(response.data);
-    
-    // Extract navigation menu items (often contain service categories)
-    const navItems = [];
-    $('nav a, .nav a, .menu a, .navigation a, [class*="nav"] a, [class*="menu"] a').each((i, el) => {
-      const text = $(el).text().trim();
-      if (text && text.length > 2 && text.length < 50) {
-        navItems.push(text);
-      }
-    });
-    
-    // Extract main headings (h1, h2, h3) that might indicate services
-    const headings = [];
-    $('h1, h2, h3').each((i, el) => {
-      const text = $(el).text().trim();
-      if (text && text.length > 3 && text.length < 100) {
-        headings.push(text);
-      }
-    });
-    
-    // Extract service/product related text from common class names
-    const serviceTexts = [];
-    $('[class*="service"], [class*="product"], [class*="offer"], [class*="solution"], [class*="feature"]').each((i, el) => {
-      const text = $(el).text().trim();
-      if (text && text.length > 10 && text.length < 200) {
-        serviceTexts.push(text.substring(0, 100));
-      }
-    });
-    
-    // Extract button/link text that might indicate services
-    const actionTexts = [];
-    $('button, .btn, .cta, [class*="button"]').each((i, el) => {
-      const text = $(el).text().trim();
-      if (text && text.length > 3 && text.length < 50) {
-        actionTexts.push(text);
-      }
-    });
-    
-    return `
-Navigation Items: ${navItems.slice(0, 10).join(', ')}
-Main Headings: ${headings.slice(0, 5).join(' | ')}
-Service Text Snippets: ${serviceTexts.slice(0, 3).join(' | ')}
-Action Buttons: ${actionTexts.slice(0, 5).join(', ')}`;
-    
-  } catch (error) {
-    console.log(`⚠️ Could not extract detailed content: ${error.message}`);
-    return 'Detailed content extraction failed.';
-  }
-}
+// Initialize Perplexity service
+const perplexityService = new PerplexityService();
 
 exports.extractCategories = async (domain) => {
-  let websiteContent = '';
-  let scrapedData = null;
+  // Get domain information from Perplexity API
+  let domainInfo = '';
   
-  // First, try to scrape the actual website content
   try {
-    console.log(`🌐 Scraping website content for category extraction: ${domain}`);
-    const scraper = new WebsiteScraper();
-    
-    // Try both http and https
-    let url = domain.startsWith('http') ? domain : `https://${domain}`;
-    
-    try {
-      scrapedData = await scraper.scrapeWebsite(url);
-    } catch (httpsError) {
-      console.log(`❌ HTTPS failed, trying HTTP for ${domain}`);
-      url = `http://${domain}`;
-      scrapedData = await scraper.scrapeWebsite(url);
-    }
-    
-    await scraper.close();
-    
-    // Extract more detailed content for better category analysis
-    const additionalContent = await extractPageContent(url);
-    
-    websiteContent = `
-Title: ${scrapedData.title}
-Meta Description: ${scrapedData.metaDescription}
-Meta Keywords: ${scrapedData.metaKeywords}
-${additionalContent}
-Word Count: ${scrapedData.wordCount}
-`;
-    
-    console.log(`✅ Successfully scraped website content: ${scrapedData.title}`);
-    
+    console.log(`🔍 Getting domain information from Perplexity for: ${domain}`);
+    domainInfo = await perplexityService.getDomainInfo(domain);
+    console.log(`Successfully retrieved domain info from Perplexity`);
+    console.log("Domain info:", domainInfo);
   } catch (error) {
-    console.error(`❌ Failed to scrape website ${domain}:`, error.message);
-    websiteContent = `Website scraping failed for ${domain}. Using domain name only.`;
+    console.error(`Failed to get domain info from Perplexity for ${domain}:`, error.message);
+    domainInfo = `Information about ${domain} - a business website offering various services and solutions.`;
   }
 
-  const catPrompt = `You are a structured data extraction engine that identifies a company's key customer-facing business categories from real website content.
+  const catPrompt = `You are a data extraction engine that identifies a company's main customer-facing business categories based on the text provided.
 
 Website: ${domain}
-Content Analysis: ${websiteContent}
+Domain Information: ${domainInfo}
 
-Extraction Rules:
-
-- Focus on tangible products, named services, branded solutions, or clearly marketed offerings.
-- Categories should reflect what the company provides to customers — these can include solutions, services, or product types.
-- Use wording similar to the website when practical, but generalize moderately if it improves clarity or grouping.
-- Avoid vague, overly broad, or purely technological terms unless they represent a named service or offering.
-- Do not include internal tools, company values, or backend technologies unless they are part of a marketed offering.
+Instructions:
+- From the domain information, identify the main business categories the company offers (products, services, or solutions).
+- Use terms from the domain info when useful, or generalize slightly for clarity.
+- Avoid vague, internal, or technical terms that are not customer-facing.
 
 Output:
-Return a JSON array of 4–6 business categories (no explanation or extra formatting).`;
-
+Return a JSON array of 4–6 category names with no explanation or extra formatting.`;
   // Use OpenAI API for category extraction
   const OpenAI = require('openai');
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });

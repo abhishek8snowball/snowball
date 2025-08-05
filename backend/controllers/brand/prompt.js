@@ -1,117 +1,59 @@
 const CategorySearchPrompt = require("../../models/CategorySearchPrompt");
-const { getCompetitorsFromGoogle } = require("../../utils/competitorDiscovery");
+const PerplexityService = require("../../utils/perplexityService");
 
-// Helper function for location-specific competitor fallbacks
-function getLocationSpecificFallback(location, domain) {
-  const domainLower = domain.toLowerCase();
-  
-  const locationCompetitors = {
-    'India': {
-      'seo': ['SEMrush India', 'Ahrefs India', 'DigiVogue', 'iProspect India', 'WATConsult'],
-      'tech': ['Infosys', 'TCS', 'Wipro', 'HCL Technologies', 'Tech Mahindra'],
-      'default': ['Local Leader India', 'Regional Player India', 'Market Competitor India', 'Indian Brand', 'Domestic Rival']
-    },
-    'United Kingdom': {
-      'seo': ['Moz UK', 'DeepCrawl', 'Screaming Frog', 'BrightLocal', 'SearchMetrics'],
-      'tech': ['Arm Holdings', 'Sage Group', 'Aveva Group', 'Micro Focus', 'Auto Trader'],
-      'default': ['UK Market Leader', 'British Competitor', 'Regional Player UK', 'Industry Rival UK', 'Local Brand UK']
-    },
-    'Canada': {
-      'seo': ['Search Engine People', 'NetGain SEO', 'SEO.ca', 'Boostability Canada', 'Straight North Canada'],
-      'tech': ['Shopify', 'BlackBerry', 'CGI Group', 'Open Text', 'Constellation Software'],
-      'default': ['Canadian Leader', 'Maple Competitor', 'Regional Player Canada', 'Industry Rival CA', 'Local Brand Canada']
-    },
-    'Australia': {
-      'seo': ['WebFX Australia', 'SEO Shark', 'Platinum SEO', 'Online Marketing Gurus', 'King Kong'],
-      'tech': ['Atlassian', 'Canva', 'WiseTech Global', 'Afterpay', 'REA Group'],
-      'default': ['Aussie Leader', 'Australian Competitor', 'Regional Player AU', 'Industry Rival AU', 'Local Brand Australia']
-    },
-    'Germany': {
-      'seo': ['SISTRIX', 'XOVI', 'OnPage.org', 'Ryte', 'Searchmetrics'],
-      'tech': ['SAP', 'Software AG', 'TeamViewer', 'Delivery Hero', 'Rocket Internet'],
-      'default': ['German Leader', 'Deutsche Competitor', 'Regional Player DE', 'Industry Rival DE', 'Local Brand Germany']
-    },
-    'Singapore': {
-      'seo': ['Impossible Marketing', 'MediaOne', 'OOm Singapore', 'First Page Digital', 'Sketch Corp'],
-      'tech': ['Sea Limited', 'Grab', 'PropertyGuru', 'Razer', 'Circles.Life'],
-      'default': ['Singapore Leader', 'Regional Competitor SG', 'ASEAN Player', 'Industry Rival SG', 'Local Brand Singapore']
-    }
-  };
-  
-  const countryData = locationCompetitors[location];
-  if (!countryData) {
-    return ['Global Leader', 'International Competitor', 'Market Player', 'Industry Rival', 'Regional Brand'];
-  }
-  
-  // Match domain to industry
-  if (domainLower.includes('seo') || domainLower.includes('marketing') || domainLower.includes('digital')) {
-    return countryData.seo || countryData.default;
-  } else if (domainLower.includes('tech') || domainLower.includes('software') || domainLower.includes('ai')) {
-    return countryData.tech || countryData.default;
-  }
-  
-  return countryData.default;
-}
+// Initialize Perplexity service
+const perplexityService = new PerplexityService();
 
-exports.generateAndSavePrompts = async (openai, catDocs, brand) => {
-  console.log(`🔄 Starting prompt generation for ${catDocs.length} categories`);
+exports.generateAndSavePrompts = async (openai, catDocs, brand, competitors = []) => {
+  console.log(`🔄 Starting simplified two-step prompt generation for ${catDocs.length} categories`);
+  console.log(`🏢 Using competitors: ${competitors.join(', ')}`);
   const prompts = [];
+  
   for (const catDoc of catDocs) {
-    console.log(`📝 Generating prompts for category: ${catDoc.categoryName} (${catDoc._id})`);
+    console.log(`📝 Step 1: Getting long-tail keywords for category: ${catDoc.categoryName} (${catDoc._id})`);
 
-    // Try to fetch location-aware competitors dynamically
-    let knownBrands = [];
-    let brandLocation = 'global';
-    
+    // Step 1: Get long-tail keywords from Perplexity
+    let keywords = [];
     try {
-      // Detect brand location (simple version for prompt generation)
-      const domain = brand.domain.toLowerCase();
-      if (domain.endsWith('.in')) brandLocation = 'India';
-      else if (domain.endsWith('.uk')) brandLocation = 'United Kingdom';  
-      else if (domain.endsWith('.ca')) brandLocation = 'Canada';
-      else if (domain.endsWith('.au')) brandLocation = 'Australia';
-      else if (domain.endsWith('.de')) brandLocation = 'Germany';
-      else if (domain.endsWith('.sg')) brandLocation = 'Singapore';
-      
-      // First try with location-specific brand search
-      const locationQuery = brandLocation !== 'global' ? `${brand.brandName} competitors in ${brandLocation}` : brand.brandName;
-      knownBrands = await getCompetitorsFromGoogle(locationQuery);
-      
-      if (!knownBrands || knownBrands.length === 0) {
-        // Fallback to location-specific category search
-        const categoryQuery = brandLocation !== 'global' ? `${catDoc.categoryName} companies in ${brandLocation}` : catDoc.categoryName;
-        knownBrands = await getCompetitorsFromGoogle(categoryQuery);
-      }
-      
-      if (!knownBrands || knownBrands.length === 0) {
-        // Last resort: Use location and domain-specific fallback
-        knownBrands = getLocationSpecificFallback(brandLocation, brand.domain);
-      }
-    } catch (err) {
-      console.error('Error fetching location-aware competitors, using fallback:', err.message);
-      knownBrands = getLocationSpecificFallback(brandLocation, brand.domain);
+      keywords = await perplexityService.getLongTailKeywords(brand.domain, catDoc.categoryName);
+      console.log(`✅ Retrieved ${keywords.length} keywords for ${catDoc.categoryName}:`, keywords);
+    } catch (error) {
+      console.error(`❌ Error getting keywords for ${catDoc.categoryName}:`, error.message);
+      // Fallback keywords
+      keywords = [
+        `${catDoc.categoryName} solutions`,
+        `best ${catDoc.categoryName} services`,
+        `${catDoc.categoryName} comparison`,
+        `${catDoc.categoryName} alternatives`,
+        `${catDoc.categoryName} reviews`
+      ];
     }
 
-    // Ensure we have at least 3 competitors
-    if (knownBrands.length < 3) {
-      console.log(`⚠️ Only ${knownBrands.length} competitors found, adding more fallback competitors`);
-      const additionalCompetitors = getAdditionalFallbackCompetitors(brand.domain, catDoc.categoryName);
-      knownBrands = [...new Set([...knownBrands, ...additionalCompetitors])].slice(0, 8);
-    }
+    // Step 2: Generate prompts based on keywords
+    console.log(`📝 Step 2: Generating prompts based on keywords for ${catDoc.categoryName}`);
+    
+    // Use real competitors if provided, otherwise fallback
+    const competitorList = competitors.length > 0 ? competitors : [
+      'competitor1', 'competitor2', 'competitor3', 'competitor4', 'competitor5'
+    ];
+    
+    // Generate prompts based on keywords that users typically ask ChatGPT
+    const promptGen = `You are helping a digital marketing researcher generate realistic, user-like questions that people typically ask ChatGPT about ${catDoc.categoryName} services.
 
-    console.log(`✅ Using ${knownBrands.length} competitors for prompts:`, knownBrands);
-    const promptGen = `You are helping a digital marketing researcher generate realistic, user-like questions related to the brand domain ${brand.domain}, brand name ${brand.brandName}, and the category: ${catDoc.categoryName}.
+Long-tail keywords for ${brand.domain} in ${catDoc.categoryName}: ${keywords.join(', ')}
 
-Generate 5 natural, topical user questions that could realistically be asked to ChatGPT. These questions should be framed so that responses would naturally mention ${brand.brandName} alongside its popular competitors.
+Popular competitors include: ${competitorList.join(', ')}.
 
-Popular competitors include: ${knownBrands.join(', ')}.
+Generate 5 natural, conversational questions that users typically ask ChatGPT about these keywords. These questions should be framed so that responses would naturally mention ${brand.brandName} alongside competitors.
 
 Guidelines:
-- Use natural, conversational phrasing reflecting genuine user curiosity (e.g., "What are the best…", "Which platforms…").
+- Use the provided keywords as inspiration for question topics
+- Use natural, conversational phrasing reflecting genuine user curiosity (e.g., "What are the best…", "Which platforms…", "How do I choose…").
 - Cover themes like comparisons, alternatives, recommendations, trending tools, and value-for-money.
 - Do NOT mention the brand name in the questions themselves.
 - Structure questions in the style commonly found in topic-based research or FAQs.
-- Create questions that lead naturally to mentioning these brands in answers.
+- Create questions that lead naturally to mentioning brands in answers.
+- Focus on questions that users would actually ask ChatGPT for help with.
 
 Format: Output only a JSON array of 5 strings.`;
 
@@ -147,31 +89,3 @@ Format: Output only a JSON array of 5 strings.`;
   return prompts;
 };
 
-// Add function to get additional fallback competitors
-function getAdditionalFallbackCompetitors(domain, categoryName) {
-  const domainLower = domain.toLowerCase();
-  const categoryLower = categoryName.toLowerCase();
-  
-  // Industry-specific additional competitors
-  const additionalCompetitors = {
-    'seo': ['Yoast SEO', 'RankMath', 'All in One SEO', 'SEOPress', 'The SEO Framework'],
-    'marketing': ['Klaviyo', 'Brevo', 'Drip', 'ConvertKit', 'ActiveCampaign'],
-    'analytics': ['Google Analytics', 'Mixpanel', 'Amplitude', 'Hotjar', 'Crazy Egg'],
-    'social': ['Buffer', 'Hootsuite', 'Sprout Social', 'Later', 'Planoly'],
-    'email': ['Mailchimp', 'Constant Contact', 'GetResponse', 'AWeber', 'ConvertKit'],
-    'crm': ['HubSpot', 'Salesforce', 'Pipedrive', 'Zoho CRM', 'Freshsales'],
-    'project': ['Asana', 'Trello', 'Monday.com', 'ClickUp', 'Notion'],
-    'design': ['Canva', 'Figma', 'Adobe Creative Cloud', 'Sketch', 'InVision']
-  };
-  
-  // Determine industry based on domain and category
-  let industry = 'general';
-  for (const [key, competitors] of Object.entries(additionalCompetitors)) {
-    if (domainLower.includes(key) || categoryLower.includes(key)) {
-      industry = key;
-      break;
-    }
-  }
-  
-  return additionalCompetitors[industry] || additionalCompetitors['seo'];
-}
