@@ -2,9 +2,10 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 
 // API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://snowball-u41l.onrender.com';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 console.log('API Base URL:', API_BASE_URL);
+console.log('Environment:', import.meta.env.MODE);
 
 // Create axios instance with default configuration
 const api = axios.create({
@@ -94,6 +95,31 @@ export const apiService = {
   
   // Blog Analysis
   getBlogAnalysis: (brandId) => api.get(`/api/v1/brand/${brandId}/blogs`),
+  
+  // Blog Extraction (separate from main analysis)
+  extractBlogs: (data) => {
+    console.log('Starting blog extraction for:', data.domain);
+    return api.post('/api/v1/brand/extract-blogs', data, {
+      timeout: 300000, // 5 minutes for blog extraction
+    });
+  },
+
+  // Trigger blog analysis for domain analysis
+  triggerBlogAnalysis: (brandId) => {
+    console.log('Triggering blog analysis for brandId:', brandId);
+    return api.post(`/api/v1/brand/${brandId}/trigger-blog-analysis`, {}, {
+      timeout: 300000, // 5 minutes for blog analysis
+    });
+  },
+  
+  // Blog Scoring - with timeout for OpenAI API calls
+  scoreSingleBlog: (brandId, blogUrl) => {
+    console.log('Starting blog scoring for:', blogUrl);
+    return api.post(`/api/v1/brand/${brandId}/blogs/score`, { blogUrl }, {
+      timeout: 120000, // 2 minutes for blog scoring
+    });
+  },
+  getBlogScores: (brandId) => api.get(`/api/v1/brand/${brandId}/blogs/scores`),
   
   // History
   getHistory: () => api.get('/api/v1/history'),

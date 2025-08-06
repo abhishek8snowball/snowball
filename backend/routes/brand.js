@@ -23,7 +23,15 @@ router.get("/prompts/:promptId/response", auth, brandController.getPromptRespons
 // Debug endpoint
 router.get("/debug/ai-responses", auth, brandController.debugAIResponses);
 
-// Blog analysis endpoint
+// Blog analysis endpoints
 router.get("/:brandId/blogs", auth, brandController.getBlogAnalysis);
+router.post("/:brandId/blogs/score", auth, brandController.scoreSingleBlog);
+router.get("/:brandId/blogs/scores", auth, brandController.getBlogScores);
+
+// Blog extraction endpoint (separate from main analysis)
+router.post("/extract-blogs", auth, brandController.extractBlogs);
+
+// Blog analysis trigger for domain analysis
+router.post("/:brandId/trigger-blog-analysis", auth, brandController.triggerBlogAnalysis);
 
 module.exports = router;

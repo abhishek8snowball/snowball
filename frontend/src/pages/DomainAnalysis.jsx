@@ -20,6 +20,8 @@ const DomainAnalysis = ({ onClose }) => {
   const [currentStep, setCurrentStep] = useState("");
   const [progressSteps, setProgressSteps] = useState([]);
   const [showConsole, setShowConsole] = useState(false);
+  const [blogAnalysisLoading, setBlogAnalysisLoading] = useState(false);
+  const [blogAnalysisTriggered, setBlogAnalysisTriggered] = useState(false);
 
   // Debug logging using useEffect
   useEffect(() => {
@@ -122,6 +124,8 @@ const DomainAnalysis = ({ onClose }) => {
     setCurrentStep("");
     setProgressSteps([]);
     setShowConsole(false);
+    setBlogAnalysisLoading(false);
+    setBlogAnalysisTriggered(false);
     onClose();
   };
 
@@ -130,6 +134,34 @@ const DomainAnalysis = ({ onClose }) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes}m ${remainingSeconds}s`;
+  };
+
+  const handleTriggerBlogAnalysis = async () => {
+    if (!result?.brandId) {
+      toast.error("No brand ID available for blog analysis");
+      return;
+    }
+
+    setBlogAnalysisLoading(true);
+    try {
+      console.log('Triggering blog analysis for brandId:', result.brandId);
+      const response = await apiService.triggerBlogAnalysis(result.brandId);
+      console.log('Blog analysis triggered successfully:', response.data);
+      
+      // Update the result with blog analysis data
+      setResult(prev => ({
+        ...prev,
+        blogAnalysis: response.data.blogAnalysis
+      }));
+      
+      setBlogAnalysisTriggered(true);
+      toast.success("Blog analysis completed successfully!");
+    } catch (error) {
+      console.error('Blog analysis error:', error);
+      toast.error("Blog analysis failed. Please try again.");
+    } finally {
+      setBlogAnalysisLoading(false);
+    }
   };
 
   return (
@@ -339,16 +371,50 @@ const DomainAnalysis = ({ onClose }) => {
           {/* Categories with Prompts - Full Width */}
           {result.categories && Array.isArray(result.categories) && result.categories.length > 0 && (
             <div className="mt-6">
-                      <CategoriesWithPrompts 
-          categories={result.categories} 
-          brandId={result.brandId} 
-        />
-        
-        <BlogAnalysis 
-          brandId={result.brandId}
-          domain={result.domain}
-          blogAnalysis={result.blogAnalysis}
-        />
+              <CategoriesWithPrompts 
+                categories={result.categories} 
+                brandId={result.brandId} 
+              />
+              
+              {/* Blog Analysis Trigger - Only show after AI prompts section */}
+              <div className="mt-6 bg-purple-50 border border-purple-200 rounded-lg p-6">
+                <div className="text-center">
+                  <h3 className="text-xl font-semibold text-purple-900 mb-2">Blog Analysis</h3>
+                  <p className="text-purple-700 mb-4">
+                    Ready to analyze blogs from this domain with AI-powered GEO scoring?
+                  </p>
+                  
+                  {!blogAnalysisTriggered && !result.blogAnalysis?.blogs?.length ? (
+                    <button
+                      onClick={handleTriggerBlogAnalysis}
+                      disabled={blogAnalysisLoading}
+                      className="px-6 py-3 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {blogAnalysisLoading ? (
+                        <div className="flex items-center">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Analyzing Blogs...
+                        </div>
+                      ) : (
+                        'Start Blog Analysis'
+                      )}
+                    </button>
+                  ) : (
+                    <div className="text-green-600 font-medium">
+                      ✅ Blog analysis completed
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {/* Blog Analysis Results - Only show after blog analysis is triggered */}
+              {(blogAnalysisTriggered || result.blogAnalysis?.blogs?.length > 0) && (
+                <BlogAnalysis 
+                  brandId={result.brandId}
+                  domain={result.domain}
+                  blogAnalysis={result.blogAnalysis}
+                />
+              )}
             </div>
           )}
 

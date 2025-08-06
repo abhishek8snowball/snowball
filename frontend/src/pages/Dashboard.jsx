@@ -16,6 +16,7 @@ const Dashboard = () => {
   const [showHistory, setShowHistory] = useState(false);
   const [showAnalyzeLink, setShowAnalyzeLink] = useState(false);
   const [showDomainAnalysis, setShowDomainAnalysis] = useState(false);
+  const [brands, setBrands] = useState([]);
   const linkRef = useRef();
   const navigate = useNavigate();
 
@@ -33,6 +34,10 @@ const Dashboard = () => {
         msg: response.data.msg, 
         luckyNumber: response.data.secret 
       });
+      
+      // Also fetch user's brands for the blog scoring link
+      const brandsResponse = await apiService.getUserBrands();
+      setBrands(brandsResponse.data.brands || []);
     } catch (error) {
       console.error('Dashboard fetch error:', error);
       // Error is already handled by API interceptor
@@ -85,6 +90,10 @@ const Dashboard = () => {
       setLoading(false);
     }
   };
+
+
+
+
 
   const handleGetSuggestion = async () => {
     if (!analyzeResult) {
@@ -146,7 +155,7 @@ const Dashboard = () => {
           )}
 
           {!showAnalyzeLink && !showDomainAnalysis && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
               <button
                 onClick={() => setShowAnalyzeLink(true)}
                 className="p-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-lg font-medium"
@@ -159,6 +168,22 @@ const Dashboard = () => {
               >
                 Domain Analysis
               </button>
+
+              {brands.length > 0 ? (
+                <Link
+                  to={`/brand/${brands[0].id}/blog-scoring`}
+                  className="p-4 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-lg font-medium text-center flex items-center justify-center"
+                >
+                  Blog GEO Scoring
+                </Link>
+              ) : (
+                <button
+                  disabled
+                  className="p-4 bg-gray-400 text-white rounded-lg text-lg font-medium text-center flex items-center justify-center cursor-not-allowed"
+                >
+                  Blog GEO Scoring
+                </button>
+              )}
             </div>
           )}
 
@@ -194,11 +219,15 @@ const Dashboard = () => {
             <DomainAnalysis onClose={() => setShowDomainAnalysis(false)} />
           )}
 
+
+
           {loading && (
             <div className="flex justify-center my-8">
               <LoadingSpinner size="large" message="Processing..." />
             </div>
           )}
+
+
 
           {analyzeResult && (
             <div className="mt-6 space-y-6">

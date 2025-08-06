@@ -9,6 +9,17 @@ exports.getCompetitors = (req, res) => res.json({ message: "Competitor insights 
 exports.getShareOfVoice = (req, res) => res.json({ message: "Share of Voice (mock)" });
 exports.getBrandRank = (req, res) => res.json({ message: "Brand rank (mock)" });
 
+// Blog analysis endpoints
+exports.getBlogAnalysis = require("./brand/blogAnalysis").getBlogAnalysis;
+exports.scoreSingleBlog = require("./brand/blogAnalysis").scoreSingleBlog;
+exports.getBlogScores = require("./brand/blogAnalysis").getBlogScores;
+
+// Blog extraction endpoint (separate from main analysis)
+exports.extractBlogs = require("./brand/blogExtraction").extractBlogs;
+
+// Blog analysis trigger for domain analysis
+exports.triggerBlogAnalysis = require("./brand/blogAnalysis").triggerBlogAnalysis;
+
 // Get user's brands with proper ownership validation
 exports.getUserBrands = async (req, res) => {
   try {
@@ -202,53 +213,5 @@ exports.debugAIResponses = async (req, res) => {
   } catch (error) {
     console.error("❌ Error in debug endpoint:", error);
     res.status(500).json({ msg: "Debug failed", error: error.message });
-  }
-};
-
-// Get blog analysis for a brand
-exports.getBlogAnalysis = async (req, res) => {
-  try {
-    const { brandId } = req.params;
-    const userId = req.user.id;
-
-    console.log(`🔍 Fetching blog analysis for brandId: ${brandId} for user: ${userId}`);
-
-    if (!brandId) {
-      return res.status(400).json({ msg: "Brand ID is required" });
-    }
-
-    // Validate brand ownership
-    const { validateBrandOwnership } = require("../utils/brandValidation");
-    const brand = await validateBrandOwnership(userId, brandId);
-
-    if (!brand) {
-      return res.status(403).json({ msg: "Access denied: You don't have permission to access this brand" });
-    }
-
-    // Get the most recent blog analysis
-    const BlogAnalysis = require("../models/BlogAnalysis");
-    const blogAnalysis = await BlogAnalysis.findOne({ brandId })
-      .sort({ createdAt: -1 });
-
-    if (!blogAnalysis) {
-      return res.json({
-        blogs: [],
-        domain: brand.domain,
-        message: "No blog analysis found for this brand"
-      });
-    }
-
-    console.log(`✅ Found blog analysis with ${blogAnalysis.blogs.length} blogs`);
-
-    res.json({
-      id: blogAnalysis._id,
-      domain: blogAnalysis.domain,
-      blogs: blogAnalysis.blogs,
-      createdAt: blogAnalysis.createdAt
-    });
-
-  } catch (error) {
-    console.error("❌ Error fetching blog analysis:", error);
-    res.status(500).json({ msg: "Failed to fetch blog analysis", error: error.message });
   }
 };

@@ -5,6 +5,7 @@ const BlogAnalysis = ({ brandId, domain, blogAnalysis }) => {
   const [blogs, setBlogs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [scoringBlog, setScoringBlog] = useState(null);
 
   useEffect(() => {
     if (blogAnalysis && blogAnalysis.blogs) {
@@ -41,7 +42,56 @@ const BlogAnalysis = ({ brandId, domain, blogAnalysis }) => {
     }
   };
 
+  const scoreSingleBlog = async (blogUrl) => {
+    if (!brandId || !blogUrl) return;
+
+    setScoringBlog(blogUrl);
+    try {
+      console.log(`📊 Scoring blog: ${blogUrl}`);
+      const response = await apiService.scoreSingleBlog(brandId, blogUrl);
+      console.log(`✅ Blog scored:`, response.data);
+
+      // Update the blog in the list with the new score
+      setBlogs(prevBlogs => 
+        prevBlogs.map(blog => 
+          blog.url === blogUrl 
+            ? { ...blog, ...response.data.blogScore }
+            : blog
+        )
+      );
+    } catch (error) {
+      console.error(`❌ Error scoring blog:`, error);
+      setError('Failed to score blog');
+    } finally {
+      setScoringBlog(null);
+    }
+  };
+
+  const getScoreColor = (score) => {
+    if (score >= 8.5) return 'text-green-600 bg-green-100';
+    if (score >= 7.0) return 'text-blue-600 bg-blue-100';
+    if (score >= 5.5) return 'text-yellow-600 bg-yellow-100';
+    if (score >= 4.0) return 'text-orange-600 bg-orange-100';
+    return 'text-red-600 bg-red-100';
+  };
+
+  const getReadinessColor = (readiness) => {
+    switch (readiness) {
+      case 'Excellent': return 'text-green-600 bg-green-100';
+      case 'Strong': return 'text-blue-600 bg-blue-100';
+      case 'Moderate': return 'text-yellow-600 bg-yellow-100';
+      case 'Poor': return 'text-orange-600 bg-orange-100';
+      case 'Critical': return 'text-red-600 bg-red-100';
+      default: return 'text-gray-600 bg-gray-100';
+    }
+  };
+
   if (!brandId && !blogAnalysis) {
+    return null;
+  }
+
+  // Only show component if blogs are available
+  if (!loading && !error && (!blogs || blogs.length === 0)) {
     return null;
   }
 
@@ -54,15 +104,15 @@ const BlogAnalysis = ({ brandId, domain, blogAnalysis }) => {
           </svg>
         </div>
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">Top Blog Analysis</h3>
-          <p className="text-sm text-gray-500">AI-extracted top 10 blogs from {domain}</p>
+          <h3 className="text-lg font-semibold text-gray-900">Blog Analysis & GEO Scoring</h3>
+          <p className="text-sm text-gray-500">AI-extracted blogs with Generative Engine Optimization scoring from {domain}</p>
         </div>
       </div>
 
       {loading && (
         <div className="text-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
-          <p className="text-sm text-gray-500 mt-2">Extracting blogs...</p>
+          <p className="text-sm text-gray-500 mt-2">Extracting and scoring blogs...</p>
         </div>
       )}
 
@@ -81,26 +131,14 @@ const BlogAnalysis = ({ brandId, domain, blogAnalysis }) => {
         </div>
       )}
 
-      {!loading && !error && blogs.length === 0 && (
-        <div className="text-center py-8">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-          </div>
-          <p className="text-gray-500 text-sm">No blogs found for this domain</p>
-          <p className="text-gray-400 text-xs mt-1">Blog extraction may not be available for this website</p>
-        </div>
-      )}
-
       {!loading && !error && blogs.length > 0 && (
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div className="flex items-center justify-between mb-4">
             <span className="text-sm font-medium text-gray-700">
-              Found {blogs.length} top blogs
+              Found {blogs.length} top blogs with GEO scoring
             </span>
             <span className="text-xs text-gray-500">
-              Extracted via AI analysis
+              AI-powered analysis & recommendations
             </span>
           </div>
 
@@ -115,7 +153,7 @@ const BlogAnalysis = ({ brandId, domain, blogAnalysis }) => {
                       </span>
                     </div>
                     <h4 className="text-sm font-medium text-gray-900 truncate">
-                      Blog Post {index + 1}
+                      {blog.title || `Blog Post ${index + 1}`}
                     </h4>
                   </div>
                   
@@ -129,19 +167,45 @@ const BlogAnalysis = ({ brandId, domain, blogAnalysis }) => {
                       {blog.url}
                     </a>
                     
-                    {blog.title && (
-                      <p className="text-xs text-gray-600 mt-1">
-                        {blog.title}
-                      </p>
-                    )}
-                    
                     <p className="text-xs text-gray-500 mt-2">
                       Extracted: {new Date(blog.extractedAt).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
                 
-                <div className="ml-4 flex-shrink-0">
+                <div className="ml-4 flex-shrink-0 flex items-center space-x-2">
+                  {/* GEO Score Display */}
+                  {blog.geoScore !== undefined && blog.geoScore > 0 ? (
+                    <div className="text-right">
+                      <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getScoreColor(blog.geoScore)}`}>
+                        {blog.geoScore}/10
+                      </div>
+                      <div className={`mt-1 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getReadinessColor(blog.geoReadiness)}`}>
+                        {blog.geoReadiness}
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => scoreSingleBlog(blog.url)}
+                      disabled={scoringBlog === blog.url}
+                      className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                    >
+                      {scoringBlog === blog.url ? (
+                        <>
+                          <div className="animate-spin rounded-full h-3 w-3 border-b border-blue-600 mr-1"></div>
+                          Scoring...
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                          </svg>
+                          Score
+                        </>
+                      )}
+                    </button>
+                  )}
+                  
                   <a 
                     href={blog.url} 
                     target="_blank" 
@@ -156,7 +220,133 @@ const BlogAnalysis = ({ brandId, domain, blogAnalysis }) => {
                 </div>
               </div>
               
-              {/* Blog Recommendations */}
+              {/* GEO Factor Scores */}
+              {blog.factorScores && Object.keys(blog.factorScores).length > 0 && (
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  <div className="flex items-center mb-3">
+                    <svg className="w-4 h-4 text-indigo-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    <h5 className="text-sm font-medium text-gray-900">GEO Factor Scores</h5>
+                  </div>
+                  
+                  {/* Detailed GEO Evaluation Results Table */}
+                  {blog.factorDetails && blog.factorDetails.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full bg-white border border-gray-200 rounded-lg">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200">
+                              Factor
+                            </th>
+                            <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200">
+                              Score
+                            </th>
+                            <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200">
+                              Weight
+                            </th>
+                            <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200">
+                              Weighted Score
+                            </th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200">
+                              Comments
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {blog.factorDetails.map((factor, index) => (
+                            <tr key={index} className="hover:bg-gray-50">
+                              <td className="px-3 py-2 text-xs font-medium text-gray-900">
+                                {factor.factor}
+                              </td>
+                              <td className="px-3 py-2 text-center">
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                  {factor.score}/10
+                                </span>
+                              </td>
+                              <td className="px-3 py-2 text-center text-xs text-gray-600">
+                                {factor.weight}%
+                              </td>
+                              <td className="px-3 py-2 text-center">
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                  {factor.weightedScore.toFixed(2)}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2 text-xs text-gray-700 leading-relaxed">
+                                {factor.comments}
+                              </td>
+                            </tr>
+                          ))}
+                          {/* Total Score Row */}
+                          <tr className="bg-gray-50 font-semibold">
+                            <td className="px-3 py-2 text-xs font-bold text-gray-900">
+                              TOTAL GEO SCORE
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800">
+                                {blog.geoScore}/10
+                              </span>
+                            </td>
+                            <td className="px-3 py-2 text-center text-xs font-bold text-gray-600">
+                              100%
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800">
+                                {blog.geoScore.toFixed(2)}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2 text-xs font-bold text-gray-700">
+                              {blog.geoReadiness} GEO Readiness
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    /* Fallback to old format if factorDetails not available */
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {Object.entries(blog.factorScores).map(([factor, data]) => (
+                        <div key={factor} className="bg-gray-50 rounded-lg p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-medium text-gray-700 truncate">
+                              {factor}
+                            </span>
+                            <span className="text-xs font-bold text-gray-900">
+                              {data.score}/10
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div 
+                              className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
+                              style={{ width: `${(data.score / 10) * 100}%` }}
+                            ></div>
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            Weight: {data.weight}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {/* GEO Summary */}
+              {blog.summary && (
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  <div className="flex items-center mb-3">
+                    <svg className="w-4 h-4 text-green-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <h5 className="text-sm font-medium text-gray-900">GEO Assessment</h5>
+                  </div>
+                  <p className="text-xs text-gray-700 leading-relaxed bg-green-50 p-3 rounded-md">
+                    {blog.summary}
+                  </p>
+                </div>
+              )}
+              
+              {/* GEO Recommendations */}
               {blog.recommendations && blog.recommendations.length > 0 && (
                 <div className="mt-4 pt-4 border-t border-gray-100">
                   <div className="flex items-center mb-3">
@@ -177,11 +367,24 @@ const BlogAnalysis = ({ brandId, domain, blogAnalysis }) => {
                       </div>
                     ))}
                   </div>
-                  
-                  <div className="mt-3 p-2 bg-purple-50 rounded-md">
-                    <p className="text-xs text-purple-700">
-                      💡 These recommendations are AI-generated to help improve the blog's performance and engagement
-                    </p>
+                </div>
+              )}
+              
+              {/* Limitations */}
+              {blog.limitations && blog.limitations.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  <div className="flex items-center mb-3">
+                    <svg className="w-4 h-4 text-yellow-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                    <h5 className="text-sm font-medium text-gray-900">Evaluation Limitations</h5>
+                  </div>
+                  <div className="bg-yellow-50 p-3 rounded-md">
+                    {blog.limitations.map((limitation, limIndex) => (
+                      <p key={limIndex} className="text-xs text-yellow-800 leading-relaxed">
+                        {limitation}
+                      </p>
+                    ))}
                   </div>
                 </div>
               )}
@@ -203,7 +406,7 @@ const BlogAnalysis = ({ brandId, domain, blogAnalysis }) => {
                 <strong>Blog Analysis Complete:</strong> Successfully extracted {blogs.length} top blogs from {domain}
               </p>
               <p className="text-xs text-green-600 mt-1">
-                These blogs represent the most valuable content on the website with AI-generated recommendations
+                Each blog is scored using the 5-factor GEO framework for Generative Engine Optimization
               </p>
             </div>
           </div>

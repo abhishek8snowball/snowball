@@ -1,6 +1,14 @@
 require("dotenv").config();
 require('express-async-errors');
 
+// Debug environment variables
+console.log('Environment variables loaded:');
+console.log('MONGO_URI:', process.env.MONGO_URI ? 'Set' : 'NOT SET');
+console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'Set' : 'NOT SET');
+console.log('OPENAI_API_KEY:', process.env.OPENAI_API_KEY ? 'Set' : 'NOT SET');
+console.log('PERPLEXITY_API_KEY:', process.env.PERPLEXITY_API_KEY ? 'Set' : 'NOT SET');
+console.log('PORT:', process.env.PORT || '5000 (default)');
+
 const connectDB = require("./db/connect");
 const express = require("express");
 const cors = require('cors');
@@ -58,7 +66,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 5000;
 
 const start = async () => {
     try {        
