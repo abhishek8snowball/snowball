@@ -276,7 +276,7 @@ const BlogAnalysis = ({ blogAnalysis, onClose, domain }) => {
             return (
               <Card 
                 key={index} 
-                className={`border border-border shadow-sm hover:shadow-md transition-all duration-300 hover:scale-[1.01] cursor-pointer ${
+                className={`border border-border shadow-sm card-hover cursor-pointer glow-primary ${
                   isExpanded ? 'ring-2 ring-primary/20' : ''
                 }`}
                 onClick={() => toggleBlogExpansion(index)}

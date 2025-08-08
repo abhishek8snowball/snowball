@@ -53,7 +53,7 @@ exports.analyzeBrand = async (req, res) => {
     }
 
     // 4. Generate prompts with real competitors (only once)
-    console.log("🤖 Step 4: Generating prompts with real competitors...");
+    console.log("🤖 Step 4: Generating prompts with OpenAI (keywords + questions)...");
     let prompts = [];
     try {
       prompts = await generateAndSavePrompts(openai, catDocs, brand, competitors);

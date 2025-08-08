@@ -55,17 +55,17 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen bg-white flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-8">
         {/* Logo */}
         <div className="text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-2xl mb-6">
-            <span className="text-2xl font-bold text-primary-foreground">S</span>
+          <div className="inline-flex items-center justify-center w-16 h-16 gradient-primary rounded-2xl mb-6">
+            <span className="text-2xl font-bold text-white">S</span>
           </div>
-          <h1 className="text-3xl font-semibold text-foreground mb-2">
+          <h1 className="text-3xl font-semibold text-[#4a4a6a] mb-2">
             Create your account
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-[#4a4a6a]">
             Get started with your SEO analysis journey
           </p>
         </div>
@@ -84,7 +84,7 @@ const Register = () => {
                   onChange={handleChange}
                   required
                   disabled={isLoading}
-                  className="h-12 text-base"
+                  className="h-12 text-base border-[#b0b0d8] focus:border-[#6658f4] focus:ring-[#6658f4]"
                 />
               </div>
 
@@ -98,7 +98,7 @@ const Register = () => {
                   onChange={handleChange}
                   required
                   disabled={isLoading}
-                  className="h-12 text-base"
+                  className="h-12 text-base border-[#b0b0d8] focus:border-[#6658f4] focus:ring-[#6658f4]"
                 />
               </div>
 
@@ -113,13 +113,13 @@ const Register = () => {
                     onChange={handleChange}
                     required
                     disabled={isLoading}
-                    className="h-12 text-base pr-12"
+                    className="h-12 text-base pr-12 border-[#b0b0d8] focus:border-[#6658f4] focus:ring-[#6658f4]"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     disabled={isLoading}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#4a4a6a] hover:text-[#6658f4] transition-colors"
                   >
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
@@ -137,13 +137,13 @@ const Register = () => {
                     onChange={handleChange}
                     required
                     disabled={isLoading}
-                    className="h-12 text-base pr-12"
+                    className="h-12 text-base pr-12 border-[#b0b0d8] focus:border-[#6658f4] focus:ring-[#6658f4]"
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     disabled={isLoading}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#4a4a6a] hover:text-[#6658f4] transition-colors"
                   >
                     {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
@@ -154,12 +154,12 @@ const Register = () => {
               <Button
                 type="submit"
                 size="lg"
-                className="w-full h-12 text-base font-medium"
+                className="w-full h-12 text-base font-medium gradient-primary hover:shadow-lg transition-all duration-200 text-white"
                 disabled={isLoading}
               >
                 {isLoading ? (
                   <div className="flex items-center space-x-2">
-                    <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></div>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                     <span>Creating account...</span>
                   </div>
                 ) : (
@@ -172,9 +172,9 @@ const Register = () => {
 
         {/* Login Link */}
         <div className="text-center">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-[#4a4a6a]">
             Already have an account?{' '}
-            <Link to="/login" className="text-primary hover:underline font-medium">
+            <Link to="/login" className="text-[#6658f4] hover:underline font-medium">
               Log in
             </Link>
           </p>

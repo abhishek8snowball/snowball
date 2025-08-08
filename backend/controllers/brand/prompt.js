@@ -1,8 +1,4 @@
 const CategorySearchPrompt = require("../../models/CategorySearchPrompt");
-const PerplexityService = require("../../utils/perplexityService");
-
-// Initialize Perplexity service
-const perplexityService = new PerplexityService();
 
 exports.generateAndSavePrompts = async (openai, catDocs, brand, competitors = []) => {
   console.log(`🔄 Starting simplified two-step prompt generation for ${catDocs.length} categories`);
@@ -12,10 +8,45 @@ exports.generateAndSavePrompts = async (openai, catDocs, brand, competitors = []
   for (const catDoc of catDocs) {
     console.log(`📝 Step 1: Getting long-tail keywords for category: ${catDoc.categoryName} (${catDoc._id})`);
 
-    // Step 1: Get long-tail keywords from Perplexity
+    // Step 1: Get long-tail keywords from OpenAI
     let keywords = [];
     try {
-      keywords = await perplexityService.getLongTailKeywords(brand.domain, catDoc.categoryName);
+      const keywordPrompt = `Generate 10 long-tail keywords for ${brand.domain} in the ${catDoc.categoryName} category. These should be specific search terms that users might use when looking for services like what ${brand.domain} offers.
+
+Return ONLY a JSON array of 10 keyword strings. Example format:
+["keyword 1", "keyword 2", "keyword 3", "keyword 4", "keyword 5", "keyword 6", "keyword 7", "keyword 8", "keyword 9", "keyword 10"]
+
+Focus on:
+- Specific, long-tail search terms
+- User intent-based keywords
+- Terms that would naturally lead to brand mentions
+- Current, relevant search patterns`;
+
+      const keywordResponse = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: [{ role: "user", content: keywordPrompt }],
+        max_tokens: 300,
+        temperature: 0.1
+      });
+
+      const keywordContent = keywordResponse.choices[0].message.content;
+      console.log("OpenAI keyword response:", keywordContent);
+
+      // Parse keywords from response
+      try {
+        const parsedKeywords = JSON.parse(keywordContent);
+        if (Array.isArray(parsedKeywords)) {
+          keywords = parsedKeywords.slice(0, 10);
+        }
+      } catch (parseError) {
+        console.log("⚠️ JSON parsing failed, extracting keywords with regex");
+        // Fallback: Extract quoted strings
+        const quotedStrings = keywordContent.match(/"([^"]+)"/g);
+        if (quotedStrings) {
+          keywords = quotedStrings.map(s => s.replace(/"/g, "")).slice(0, 10);
+        }
+      }
+
       console.log(`✅ Retrieved ${keywords.length} keywords for ${catDoc.categoryName}:`, keywords);
     } catch (error) {
       console.error(`❌ Error getting keywords for ${catDoc.categoryName}:`, error.message);

@@ -247,7 +247,7 @@ const BlogAnalysis = ({ onClose, initialDomain = "", inline = false }) => {
                     placeholder="example.com or https://example.com"
                     value={domain}
                     onChange={(e) => setDomain(e.target.value)}
-                    className="h-12 text-base"
+                    className="h-12 text-base focus-ring-primary"
                     required
                   />
                   <p className="text-xs text-muted-foreground">
@@ -255,7 +255,10 @@ const BlogAnalysis = ({ onClose, initialDomain = "", inline = false }) => {
                   </p>
                 </div>
                 
-                <Button type="submit" className="w-full h-12 text-base">
+                <Button 
+                  type="submit" 
+                  className="w-full h-12 text-base glow-primary hover:shadow-lg transition-all duration-200"
+                >
                   <Globe className="w-4 h-4 mr-2" />
                   Start Blog Analysis
                 </Button>
