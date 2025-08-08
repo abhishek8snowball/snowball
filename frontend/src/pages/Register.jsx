@@ -1,100 +1,182 @@
-import React, { useEffect, useState } from "react";
-import Image from "../assets/image.png";
-import Logo from "../assets/logo.png";
-import GoogleSvg from "../assets/icons8-google.svg";
-import { FaEye } from "react-icons/fa6";
-import { FaEyeSlash } from "react-icons/fa6";
-import "../styles/Register.css";
-import { Link, useNavigate } from "react-router-dom";
-import { apiService } from "../utils/api";
-import { toast } from "react-toastify";
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Eye, EyeOff } from 'lucide-react';
+import { apiService } from '../utils/api';
+import { toast } from 'react-toastify';
 
-
-
-const Login = () => {
-  const [ showPassword, setShowPassword ] = useState(false);
+const Register = () => {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: ''
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const [ token, setToken ] = useState(JSON.parse(localStorage.getItem("auth")) || "");
 
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
 
-
-  const handleRegisterSubmit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    let name = e.target.name.value;
-    let lastname = e.target.lastname.value;
-    let email = e.target.email.value;
-    let password = e.target.password.value;
-    let confirmPassword = e.target.confirmPassword.value;
-
-    if(name.length > 0 && lastname.length > 0 && email.length > 0 && password.length > 0 && confirmPassword.length > 0){
-
-      if(password === confirmPassword){
-        const formData = {
-          name: name + " " + lastname,
-          email,
-          password
-        };
-        try{
-        const response = await apiService.register(formData);
-         toast.success("Registration successful");
-         navigate("/login");
-       }catch(err){
-         toast.error(err.response?.data?.msg || err.message);
-       }
-      }else{
-        toast.error("Passwords don't match");
-      }
     
-
-    }else{
-      toast.error("Please fill all inputs");
+    if (formData.password !== formData.confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
     }
-
-
-  }
-
-  useEffect(() => {
-    if(token !== ""){
-      toast.success("You already logged in");
-      navigate("/dashboard");
+    
+    setIsLoading(true);
+    
+    try {
+      const { confirmPassword, ...registrationData } = formData;
+      const response = await apiService.register(registrationData);
+      
+      if (response.data) {
+        toast.success('Registration successful! Please login.');
+        navigate('/login');
+      } else {
+        toast.error('Registration failed. Please try again.');
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      toast.error(error.response?.data?.msg || 'Registration failed. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
-  }, []);
+  };
 
   return (
-    <div className="register-main">
-      <div className="register-left">
-        <img src={Image} alt="" />
-      </div>
-      <div className="register-right">
-        <div className="register-right-container">
-          <div className="register-logo">
-            <img src={Logo} alt="" />
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="w-full max-w-md space-y-8">
+        {/* Logo */}
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-2xl mb-6">
+            <span className="text-2xl font-bold text-primary-foreground">S</span>
           </div>
-          <div className="register-center">
-            <h2>Welcome to our website!</h2>
-            <p>Please enter your details</p>
-            <form onSubmit={handleRegisterSubmit}>
-            <input type="text" placeholder="Name" name="name" required={true} />
-            <input type="text" placeholder="Lastname" name="lastname" required={true} />
-              <input type="email" placeholder="Email" name="email" required={true} />
-              <div className="pass-input-div">
-                <input type={showPassword ? "text" : "password"} placeholder="Password" name="password" required={true} />
-                {showPassword ? <FaEyeSlash onClick={() => {setShowPassword(!showPassword)}} /> : <FaEye onClick={() => {setShowPassword(!showPassword)}} />}
-                
-              </div>
-              <div className="pass-input-div">
-                <input type={showPassword ? "text" : "password"} placeholder="Confirm Password" name="confirmPassword" required={true} />
-                {showPassword ? <FaEyeSlash onClick={() => {setShowPassword(!showPassword)}} /> : <FaEye onClick={() => {setShowPassword(!showPassword)}} />}
-                
-              </div>
-              <div className="register-center-buttons">
-                <button type="submit">Sign Up</button>
-              </div>
-            </form>
-          </div>
+          <h1 className="text-3xl font-semibold text-foreground mb-2">
+            Create your account
+          </h1>
+          <p className="text-muted-foreground">
+            Get started with your SEO analysis journey
+          </p>
+        </div>
 
-          <p className="login-bottom-p">
-            Already have an account? <Link to="/login">Login</Link>
+        {/* Register Form */}
+        <Card className="border-0 shadow-none">
+          <CardContent className="p-0">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Name Input */}
+              <div className="space-y-2">
+                <Input
+                  type="text"
+                  name="name"
+                  placeholder="Enter your full name..."
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                  disabled={isLoading}
+                  className="h-12 text-base"
+                />
+              </div>
+
+              {/* Email Input */}
+              <div className="space-y-2">
+                <Input
+                  type="email"
+                  name="email"
+                  placeholder="Enter your email address..."
+                  value={formData.email}
+                  onChange={handleChange}
+                  required
+                  disabled={isLoading}
+                  className="h-12 text-base"
+                />
+              </div>
+
+              {/* Password Input */}
+              <div className="space-y-2">
+                <div className="relative">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    placeholder="Create a password..."
+                    value={formData.password}
+                    onChange={handleChange}
+                    required
+                    disabled={isLoading}
+                    className="h-12 text-base pr-12"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    disabled={isLoading}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Confirm Password Input */}
+              <div className="space-y-2">
+                <div className="relative">
+                  <Input
+                    type={showConfirmPassword ? "text" : "password"}
+                    name="confirmPassword"
+                    placeholder="Confirm your password..."
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    required
+                    disabled={isLoading}
+                    className="h-12 text-base pr-12"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    disabled={isLoading}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <Button
+                type="submit"
+                size="lg"
+                className="w-full h-12 text-base font-medium"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></div>
+                    <span>Creating account...</span>
+                  </div>
+                ) : (
+                  "Create account"
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        {/* Login Link */}
+        <div className="text-center">
+          <p className="text-sm text-muted-foreground">
+            Already have an account?{' '}
+            <Link to="/login" className="text-primary hover:underline font-medium">
+              Log in
+            </Link>
           </p>
         </div>
       </div>
@@ -102,4 +184,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default Register;

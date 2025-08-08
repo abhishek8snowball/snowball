@@ -154,7 +154,10 @@ Provide 5 specific, actionable recommendations for improving this blog's GEO per
         timeout: 30000,
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        }
+        },
+        httpsAgent: new (require('https').Agent)({
+          rejectUnauthorized: false
+        })
       });
 
       const html = response.data;

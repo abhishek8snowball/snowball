@@ -5,10 +5,8 @@ const brandController = require("../controllers/brand");
 
 // Brand analysis endpoints
 router.post("/analyze", auth, brandController.analyzeBrand);
-router.post("/queries", auth, brandController.generatePrompts);
-router.post("/competitors", auth, brandController.getCompetitors);
-router.post("/share-of-voice", auth, brandController.getShareOfVoice);
-router.get("/rank", auth, brandController.getBrandRank);
+router.get("/analysis/:brandId", auth, brandController.getBrandAnalysis);
+// Removed unused mock endpoint routes
 
 // User data endpoints with proper ownership validation
 router.get("/user/brands", auth, brandController.getUserBrands);

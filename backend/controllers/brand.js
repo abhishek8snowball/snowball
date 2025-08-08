@@ -4,10 +4,8 @@ const CategorySearchPrompt = require("../models/CategorySearchPrompt");
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 exports.analyzeBrand = require("./brand/analyzeBrand").analyzeBrand;
-exports.generatePrompts = (req, res) => res.json({ message: "Prompts generated (mock)" });
-exports.getCompetitors = (req, res) => res.json({ message: "Competitor insights (mock)" });
-exports.getShareOfVoice = (req, res) => res.json({ message: "Share of Voice (mock)" });
-exports.getBrandRank = (req, res) => res.json({ message: "Brand rank (mock)" });
+exports.getBrandAnalysis = require("./brand/analyzeBrand").getBrandAnalysis;
+// Removed unused mock endpoints - these were never called by frontend
 
 // Blog analysis endpoints
 exports.getBlogAnalysis = require("./brand/blogAnalysis").getBlogAnalysis;

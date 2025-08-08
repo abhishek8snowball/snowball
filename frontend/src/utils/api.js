@@ -70,9 +70,12 @@ export const apiService = {
   // Authentication
   login: (data) => api.post('/api/v1/login', data),
   register: (data) => api.post('/api/v1/register', data),
+  logout: () => {
+    localStorage.removeItem('auth');
+    window.location.href = '/login';
+  },
   
-  // Dashboard
-  getDashboard: () => api.get('/api/v1/dashboard'),
+  // Removed unused getDashboard endpoint
   
   // Brand Analysis - with longer timeout for Perplexity API calls
   analyzeBrand: (data) => {
@@ -81,20 +84,25 @@ export const apiService = {
       timeout: 360000, // 6 minutes for domain analysis (increased for Perplexity API calls)
     });
   },
-  getBrandRank: () => api.get('/api/v1/brand/rank'),
-  getCompetitors: (data) => api.post('/api/v1/brand/competitors', data),
-  getShareOfVoice: (data) => api.post('/api/v1/brand/share-of-voice', data),
-  generatePrompts: (data) => api.post('/api/v1/brand/queries', data),
+  getBrandAnalysis: (brandId) => {
+    console.log('Getting existing brand analysis for brandId:', brandId);
+    return api.get(`/api/v1/brand/analysis/${brandId}`);
+  },
+  getUserBrands: () => {
+    console.log('Getting user brands');
+    return api.get('/api/v1/brand/user/brands');
+  },
+  // Removed unused API methods that called mock endpoints
   
   // Categories and Prompts
   getCategoryPrompts: (categoryId) => api.get(`/api/v1/brand/categories/${categoryId}/prompts`),
   getPromptResponse: (promptId) => api.get(`/api/v1/brand/prompts/${promptId}/response`),
   
-  // Debug
-  debugAIResponses: () => api.get('/api/v1/brand/debug/ai-responses'),
+  // Removed unused debug endpoint
   
   // Blog Analysis
   getBlogAnalysis: (brandId) => api.get(`/api/v1/brand/${brandId}/blogs`),
+  triggerBlogAnalysis: (brandId) => api.post(`/api/v1/brand/${brandId}/blogs`),
   
   // Blog Extraction (separate from main analysis)
   extractBlogs: (data) => {
@@ -125,9 +133,7 @@ export const apiService = {
   getHistory: () => api.get('/api/v1/history'),
   deleteHistory: (id) => api.delete(`/api/v1/history/${id}`),
   
-  // Legacy endpoints (for backward compatibility)
-  analyzeLink: (data) => api.post('/api/v1/analyze', data),
-  getSuggestions: (data) => api.post('/api/v1/suggest', data),
+  // Removed unused legacy endpoints
 };
 
 export default api; 

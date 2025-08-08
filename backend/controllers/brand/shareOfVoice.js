@@ -35,9 +35,6 @@ async function enrichSourceData(aiResponses, brand, competitors) {
   return enrichedSources;
 }
 
-// ✅ 3. SOURCE WEIGHTING - AI responses only (no simulated data)
-// Removed simulated data functions as Share of Voice now only uses AI responses
-
 // ✅ 4. NLP TOPIC MATCHING
 async function getCategoryKeywords(categoryId) {
   // TODO: Fetch category-specific keywords from database
@@ -101,102 +98,91 @@ function filterLowQualityMentions(mentions) {
 function capOutlierScores(mentions) {
   if (mentions.length === 0) return mentions;
 
-  // Calculate mean and standard deviation
-  const scores = mentions.map(m => m.score);
-  const mean = scores.reduce((sum, score) => sum + score, 0) / scores.length;
-  const variance = scores.reduce((sum, score) => sum + Math.pow(score - mean, 2), 0) / scores.length;
-  const stdDev = Math.sqrt(variance);
-
-  // Cap scores at mean + 2 standard deviations
-  const maxScore = mean + (2 * stdDev);
+  // Calculate median and MAD for outlier detection
+  const scores = mentions.map(m => m.score).sort((a, b) => a - b);
+  const median = scores[Math.floor(scores.length / 2)];
+  const mad = scores.reduce((sum, score) => sum + Math.abs(score - median), 0) / scores.length;
+  const threshold = median + (3 * mad); // 3 MAD rule
 
   return mentions.map(mention => ({
     ...mention,
-    score: Math.min(mention.score, maxScore)
+    score: Math.min(mention.score, threshold)
   }));
 }
 
-// Helper function to calculate source breakdown
+// ✅ 5. SOURCE BREAKDOWN
 function calculateSourceBreakdown(mentions) {
-  const breakdown = {
-    openai: 0  // Only AI responses
-  };
-
+  const breakdown = {};
   mentions.forEach(mention => {
-    const sourceType = mention.sourceType || 'openai';
-    if (breakdown.hasOwnProperty(sourceType)) {
-      breakdown[sourceType] += mention.score;
-    }
+    const source = mention.sourceType || 'unknown';
+    breakdown[source] = (breakdown[source] || 0) + mention.score;
   });
-
   return breakdown;
 }
 
-// Helper function to get topic relevance statistics
+// ✅ 7. TOPIC RELEVANCE STATS
 function getTopicRelevanceStats(mentions) {
-  if (mentions.length === 0) return { averageRelevance: 0, highRelevanceCount: 0 };
+  if (mentions.length === 0) return { averageRelevance: 0, highRelevanceCount: 0, totalMentions: 0 };
 
-  const relevanceScores = mentions.map(m => m.topicRelevanceScore || 1.0);
-  const averageRelevance = relevanceScores.reduce((sum, score) => sum + score, 0) / relevanceScores.length;
-  const highRelevanceCount = relevanceScores.filter(score => score > 0.7).length;
+  const relevances = mentions.map(m => m.topicRelevanceScore || 0);
+  const averageRelevance = relevances.reduce((sum, r) => sum + r, 0) / relevances.length;
+  const highRelevanceCount = relevances.filter(r => r > 0.7).length;
 
   return {
-    averageRelevance: averageRelevance,
-    highRelevanceCount: highRelevanceCount,
+    averageRelevance,
+    highRelevanceCount,
     totalMentions: mentions.length
   };
 }
 
-// Helper method to find context for an entity
+// ✅ 9. FIND ENTITY CONTEXT
 function findEntityContext(entity, sentences, paragraphs) {
-  // Look for the entity in sentences first
+  // Look for entity in sentences first
   for (const sentence of sentences) {
     if (sentence.toLowerCase().includes(entity.toLowerCase())) {
       return sentence;
     }
   }
 
-  // Look in paragraphs if not found in sentences
+  // Fallback to paragraphs
   for (const paragraph of paragraphs) {
     if (paragraph.toLowerCase().includes(entity.toLowerCase())) {
-      return paragraph;
+      return paragraph.substring(0, 200) + '...';
     }
   }
 
-  // Return a default context if not found
-  return sentences[0] || paragraphs[0] || '';
+  return entity; // Fallback to entity name
 }
 
-// Helper method to get sentiment breakdown
+// ✅ 10. SENTIMENT BREAKDOWN
 function getSentimentBreakdown(mentions) {
   const breakdown = { positive: 0, negative: 0, neutral: 0 };
   mentions.forEach(mention => {
-    breakdown[mention.sentiment]++;
+    const sentiment = mention.sentiment || 'neutral';
+    breakdown[sentiment]++;
   });
   return breakdown;
 }
 
-// Helper method to get context breakdown
+// ✅ 11. CONTEXT BREAKDOWN
 function getContextBreakdown(mentions) {
-  const breakdown = {};
+  const breakdown = { firstParagraph: 0, heading: 0, title: 0 };
   mentions.forEach(mention => {
-    const contextType = mention.contextType || 'normal';
-    breakdown[contextType] = (breakdown[contextType] || 0) + 1;
+    const contextType = mention.contextType || 'heading';
+    breakdown[contextType]++;
   });
   return breakdown;
 }
 
-// Helper function to convert channel breakdown objects to Maps for MongoDB
+// ✅ 12. CONVERT CHANNEL BREAKDOWN
 function convertChannelBreakdownToMaps(channelBreakdown) {
   const converted = {};
   
   Object.keys(channelBreakdown).forEach(channel => {
-    const channelData = channelBreakdown[channel];
-    if (typeof channelData === 'object' && channelData !== null) {
-      // Sanitize keys to remove dots and other invalid characters for MongoDB Maps
-      const sanitizedEntries = Object.entries(channelData).map(([key, value]) => {
-        // Replace dots with underscores and other invalid characters
-        const sanitizedKey = key.replace(/[.]/g, '_').replace(/[^a-zA-Z0-9_]/g, '_');
+    if (channelBreakdown[channel] && typeof channelBreakdown[channel] === 'object') {
+      const entries = Object.entries(channelBreakdown[channel]);
+      const sanitizedEntries = entries.map(([key, value]) => {
+        const sanitizedKey = key.replace(/[^a-zA-Z0-9]/g, '_');
         return [sanitizedKey, value];
       });
       converted[channel] = new Map(sanitizedEntries);
@@ -208,15 +194,24 @@ function convertChannelBreakdownToMaps(channelBreakdown) {
   return converted;
 }
 
-// Add fallback entity extraction function
-function extractEntitiesFallback(text) {
+// Optimized entity extraction - single pass
+function extractEntitiesOptimized(text, allBrands) {
   if (!text || typeof text !== 'string') {
     return [];
   }
 
   const entities = new Set();
+  const textLower = text.toLowerCase();
 
-  // Enhanced regex patterns for better entity extraction
+  // First, check for target brands (most important)
+  allBrands.forEach(brand => {
+    const brandLower = brand.toLowerCase();
+    if (textLower.includes(brandLower)) {
+      entities.add(brand);
+    }
+  });
+
+  // Then extract other entities with regex (single pass)
   const patterns = [
     // Company names with common suffixes
     /\b[A-Z][a-z]+ (Inc|Corp|Corporation|Company|Co|LLC|Ltd|Limited|Group|Solutions|Systems|Technologies|Tech|Software|Services|Consulting|Partners|Associates|Enterprises|Industries|International|Global|Worldwide|Digital|Online|Web|Internet|Media|Marketing|Advertising|Agency|Studio|Lab|Labs|Works|Factory|Hub|Center|Network|Platform|Marketplace|Store|Shop|Retail|E-commerce|Commerce)\b/g,
@@ -236,7 +231,7 @@ function extractEntitiesFallback(text) {
     const matches = text.match(pattern);
     if (matches) {
       matches.forEach(match => {
-        const cleaned = match.trim().toLowerCase();
+        const cleaned = match.trim();
         if (cleaned && cleaned.length > 2) {
           entities.add(cleaned);
         }
@@ -256,8 +251,6 @@ exports.calculateShareOfVoice = async function(brand, competitors, aiResponses, 
     
     // ✅ 1. TEXT CLEANING & NORMALIZATION
     const textCleaner = new TextCleaner();
-    const _entityRecognizer = new EntityRecognizer();
-    const _brandMatcher = new BrandMatcher();
     const mentionScorer = new MentionScorer();
 
     // ✅ 2. ENRICH SOURCE DATA - Structure for multiple sources
@@ -265,19 +258,6 @@ exports.calculateShareOfVoice = async function(brand, competitors, aiResponses, 
     
     console.log(`🔍 Processing ${aiResponses.length} AI responses for enrichment`);
     console.log(`🔍 Enriched sources created: ${enrichedSources.length} sources`);
-    enrichedSources.forEach((source, index) => {
-      console.log(`  Source ${index + 1}: ${source.sourceType}, length: ${source.responseText?.length || 0}`);
-      if (source.responseText) {
-        console.log(`  Sample: "${source.responseText.substring(0, 100)}..."`);
-        // Check if any target brands are in this source
-        const textLower = source.responseText.toLowerCase();
-        allBrands.forEach(brandName => {
-          if (textLower.includes(brandName.toLowerCase())) {
-            console.log(`    ✅ Found "${brandName}" in source ${index + 1}`);
-          }
-        });
-      }
-    });
 
     // ✅ 3. SOURCE WEIGHTING CONFIGURATION - AI responses only
     const sourceWeights = {
@@ -319,76 +299,29 @@ exports.calculateShareOfVoice = async function(brand, competitors, aiResponses, 
       }
 
       console.log(`📝 Analyzing ${sourceType} source, length: ${responseText.length}`);
-      console.log(`📝 Sample of response text: "${responseText.substring(0, 200)}..."`);
 
-      // Check if target brands are mentioned in the text
-      console.log(`🔍 Checking for target brands in ${sourceType} source:`);
-      allBrands.forEach(brandName => {
-        const brandLower = brandName.toLowerCase();
-        const textLower = responseText.toLowerCase();
-        if (textLower.includes(brandLower)) {
-          console.log(`  ✅ Found "${brandName}" in ${sourceType} source`);
-        } else {
-          console.log(`  ❌ "${brandName}" NOT found in ${sourceType} source`);
-        }
-      });
-
-      // Clean and normalize text
+      // Clean and normalize text (single pass)
       const cleanedText = textCleaner.cleanText(responseText);
       const sentences = textCleaner.extractSentences(cleanedText);
       const paragraphs = textCleaner.extractParagraphs(cleanedText);
 
-      // Extract entities with improved fallback
-      let entities = [];
-      try {
-        entities = _entityRecognizer.extractEntities(cleanedText);
-        console.log(`🔍 Found ${entities.length} entities with NLP:`, entities);
-      } catch (error) {
-        console.log(`⚠️ NLP entity extraction failed, using fallback: ${error.message}`);
-        entities = extractEntitiesFallback(cleanedText);
-      }
-
-      // Extract domain-specific entities
-      const domainSpecificEntities = _entityRecognizer.extractDomainSpecificEntities(
-        responseText, brand.domain, brand.brandName
-      );
-      console.log(`🔍 Found ${domainSpecificEntities.length} domain-specific entities:`, domainSpecificEntities);
-
-      // Add target brands as entities if they're mentioned in the text (case-insensitive)
-      const targetBrandEntities = [];
-      allBrands.forEach(brandName => {
-        const brandLower = brandName.toLowerCase();
-        const textLower = responseText.toLowerCase();
-        
-        // Check if brand is mentioned in the text
-        if (textLower.includes(brandLower)) {
-          console.log(`🎯 Found target brand "${brandName}" mentioned in text`);
-          targetBrandEntities.push(brandName);
-        }
-        
-        // Also check for domain mentions
-        if (brandName.includes('.') && textLower.includes(brandName)) {
-          console.log(`🎯 Found target domain "${brandName}" mentioned in text`);
-          targetBrandEntities.push(brandName);
-        }
-      });
-
-      // Combine all entities and remove duplicates
-      const allEntities = [...new Set([...entities, ...domainSpecificEntities, ...targetBrandEntities])];
-      console.log(`🔍 Total unique entities to process: ${allEntities.length}`);
-      console.log(`🔍 All entities:`, allEntities);
+      // Extract entities with optimized single-pass extraction
+      const entities = extractEntitiesOptimized(cleanedText, allBrands);
+      console.log(`🔍 Found ${entities.length} entities with optimized extraction:`, entities);
 
       // Process each entity
-      allEntities.forEach(entity => {
+      entities.forEach(entity => {
         if (!entity || entity.length < 3) return; // Skip very short entities
         
         console.log(`🔍 Processing entity: "${entity}"`);
-        const match = _brandMatcher.matchEntityToBrand(entity, allBrands);
-        console.log(`🔍 Match result for "${entity}":`, match);
         
-        if (match && match.confidence > 0.4) { // Lowered confidence threshold
-          const matchedBrand = match.brand.toLowerCase();
-          
+        // Simple brand matching (no need for complex matching here)
+        const matchedBrand = allBrands.find(brand => 
+          entity.toLowerCase().includes(brand.toLowerCase()) || 
+          brand.toLowerCase().includes(entity.toLowerCase())
+        );
+        
+        if (matchedBrand) {
           // Find context
           const context = findEntityContext(entity, sentences, paragraphs);
           const textWeight = textCleaner.getTextWeight(context);
@@ -405,7 +338,6 @@ exports.calculateShareOfVoice = async function(brand, competitors, aiResponses, 
           
           // Apply source and topic weighting
           const enhancedScore = mentionScore.score * sourceImpactScore * topicRelevanceScore;
-          console.log(`🔍 Enhanced score for "${entity}": ${enhancedScore} (base: ${mentionScore.score}, source: ${sourceImpactScore}, topic: ${topicRelevanceScore})`);
           
           // ✅ 6. DETECT CO-MENTIONS
           const coMentionBrands = detectCoMentions(context, allBrands, matchedBrand);
@@ -415,8 +347,8 @@ exports.calculateShareOfVoice = async function(brand, competitors, aiResponses, 
             entity: entity,
             originalEntity: entity,
             context: context,
-            confidence: match.confidence,
-            matchType: match.matchType,
+            confidence: 0.8, // Default confidence for matched brands
+            matchType: 'exact',
             score: enhancedScore,
             sentiment: mentionScore.sentiment,
             contextType: mentionScore.contextType,
@@ -451,7 +383,7 @@ exports.calculateShareOfVoice = async function(brand, competitors, aiResponses, 
 
           console.log(`✅ Enhanced match: "${entity}" → "${matchedBrand}" (${sourceType}, score: ${enhancedScore.toFixed(2)})`);
         } else {
-          console.log(`❌ No match for entity "${entity}" (confidence: ${match?.confidence || 0})`);
+          console.log(`❌ No match for entity "${entity}"`);
         }
       });
     }

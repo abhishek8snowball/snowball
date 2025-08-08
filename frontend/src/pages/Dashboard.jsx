@@ -1,316 +1,292 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
-import { apiService } from '../utils/api';
-import LoadingSpinner from '../components/LoadingSpinner';
+import React, { useState } from 'react';
+// import { Link } from 'react-router-dom';
+import { Button } from '../components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Input } from '../components/ui/input';
 import DomainAnalysis from './DomainAnalysis';
+import BlogAnalysis from './BlogAnalysis';
+import { apiService } from '../utils/api';
+import { getUserName } from '../utils/auth';
+import { 
+  BarChart3, 
+  Globe, 
+  FileText, 
+  Settings, 
+  LogOut, 
+  Link as LinkIcon,
+  Activity,
+  ArrowLeft
+} from 'lucide-react';
 
 const Dashboard = () => {
-  const [token, setToken] = useState(JSON.parse(localStorage.getItem("auth")) || "");
-  const [data, setData] = useState({});
-  const [analyzeResult, setAnalyzeResult] = useState(null);
-  const [suggestion, setSuggestion] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [dashboardLoading, setDashboardLoading] = useState(true);
-  const [history, setHistory] = useState([]);
-  const [showHistory, setShowHistory] = useState(false);
+  const [activeSection, setActiveSection] = useState('dashboard');
   const [showAnalyzeLink, setShowAnalyzeLink] = useState(false);
-  const [showDomainAnalysis, setShowDomainAnalysis] = useState(false);
-  const [brands, setBrands] = useState([]);
-  const linkRef = useRef();
-  const navigate = useNavigate();
-
-  const fetchDashboardData = async () => {
-    if (!token) {
-      navigate("/login");
-      toast.warn("Please login first to access dashboard");
-      return;
-    }
-
-    setDashboardLoading(true);
-    try {
-      const response = await apiService.getDashboard();
-      setData({ 
-        msg: response.data.msg, 
-        luckyNumber: response.data.secret 
-      });
-      
-      // Also fetch user's brands for the blog scoring link
-      const brandsResponse = await apiService.getUserBrands();
-      setBrands(brandsResponse.data.brands || []);
-    } catch (error) {
-      console.error('Dashboard fetch error:', error);
-      // Error is already handled by API interceptor
-    } finally {
-      setDashboardLoading(false);
-    }
-  };
-
-  const fetchHistory = async () => {
-    try {
-      const response = await apiService.getHistory();
-      setHistory(response.data.history || []);
-      setShowHistory(true);
-    } catch (error) {
-      console.error('History fetch error:', error);
-      // Error is already handled by API interceptor
-    }
-  };
-
-  useEffect(() => {
-    fetchDashboardData();
-  }, [token]);
-
-  const handleAnalyzeLink = async (e) => {
-    e.preventDefault();
-    const url = linkRef.current?.value?.trim();
-    
-    if (!url) {
-      toast.error("Please enter a valid URL");
-      return;
-    }
-
-    // Basic URL validation
-    try {
-      new URL(url);
-    } catch {
-      toast.error("Please enter a valid URL");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const response = await apiService.analyzeLink({ url });
-      setAnalyzeResult(response.data.result);
-      toast.success("Analysis complete!");
-    } catch (error) {
-      console.error('Link analysis error:', error);
-      // Error is already handled by API interceptor
-    } finally {
-      setLoading(false);
-    }
-  };
-
-
-
-
-
-  const handleGetSuggestion = async () => {
-    if (!analyzeResult) {
-      toast.error("Please analyze a link first");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const response = await apiService.getSuggestions({
-        tags: analyzeResult,
-        url: linkRef.current?.value
-      });
-      setSuggestion(response.data.suggestion);
-      toast.success("Suggestion received!");
-    } catch (error) {
-      console.error('Suggestion fetch error:', error);
-      // Error is already handled by API interceptor
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [activeTool, setActiveTool] = useState(null); // 'domain' | 'blog' | null
+  const [domainToAnalyze, setDomainToAnalyze] = useState('');
+  const [userName, setUserName] = useState(getUserName());
 
   const handleLogout = () => {
-    localStorage.removeItem("auth");
-    setToken("");
-    navigate("/login");
-    toast.success("Logged out successfully");
+    apiService.logout();
   };
 
-  if (dashboardLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <LoadingSpinner size="large" message="Loading dashboard..." />
-      </div>
-    );
-  }
+  const handleDomainAnalysisSubmit = (e) => {
+    e.preventDefault();
+    if (domainToAnalyze.trim()) {
+      setActiveTool('domain');
+    }
+  };
+
+  const renderInlineTool = () => {
+    if (activeTool === 'domain') {
+      return (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-semibold text-foreground"></h2>
+              <p className="text-muted-foreground"></p>
+            </div>
+            <Button variant="outline" onClick={() => setActiveTool(null)} className="inline-flex items-center">
+              <ArrowLeft className="w-4 h-4 mr-2" /> Back
+            </Button>
+          </div>
+          <DomainAnalysis onClose={() => setActiveTool(null)} />
+        </div>
+      );
+    }
+    if (activeTool === 'blog') {
+      return (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-semibold text-foreground">Blog Analysis</h2>
+              <p className="text-muted-foreground">Analyze blog content quality and optimization</p>
+            </div>
+            <Button variant="outline" onClick={() => setActiveTool(null)} className="inline-flex items-center">
+              <ArrowLeft className="w-4 h-4 mr-2" /> Back
+            </Button>
+          </div>
+          <BlogAnalysis inline onClose={() => setActiveTool(null)} />
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-            <button
-              onClick={handleLogout}
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
-            >
-              Logout
-            </button>
+    <div className="min-h-screen bg-background flex">
+      {/* Sidebar */}
+      <div className="w-64 bg-card border-r border-border flex flex-col">
+        {/* Logo */}
+        <div className="p-6 border-b border-border">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <span className="text-sm font-bold text-primary-foreground">S</span>
+            </div>
+            <span className="text-lg font-semibold text-foreground">Snowball</span>
           </div>
+        </div>
 
-          {data.msg && (
-            <div className="mb-6 p-4 bg-blue-50 rounded-lg">
-              <p className="text-lg text-blue-800">
-                Hi {data.msg}! {data.luckyNumber && `Your lucky number is: ${data.luckyNumber}`}
+        {/* Navigation */}
+        <nav className="flex-1 p-4 space-y-2">
+          <button
+            onClick={() => { setActiveSection('dashboard'); setActiveTool(null); }}
+            className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeSection === 'dashboard' && !activeTool
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+            }`}
+          >
+            <BarChart3 className="w-4 h-4" />
+            <span>Dashboard</span>
+          </button>
+
+          <button
+            onClick={() => { setActiveSection('dashboard'); setActiveTool('blog'); }}
+            className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeTool === 'blog' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+            }`}
+          >
+            <FileText className="w-4 h-4" />
+            <span>Blog Analysis</span>
+          </button>
+
+          <button
+            onClick={() => { setActiveSection('history'); setActiveTool(null); }}
+            className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeSection === 'history'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+            }`}
+          >
+            <Activity className="w-4 h-4" />
+            <span>History</span>
+          </button>
+
+          <button
+            onClick={() => { setActiveSection('settings'); setActiveTool(null); }}
+            className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeSection === 'settings'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+            }`}
+          >
+            <Settings className="w-4 h-4" />
+            <span>Settings</span>
+          </button>
+        </nav>
+
+        {/* Logout */}
+        <div className="p-4 border-t border-border">
+          <Button
+            variant="ghost"
+            onClick={handleLogout}
+            className="w-full justify-start text-muted-foreground hover:text-foreground"
+          >
+            <LogOut className="w-4 h-4 mr-3" />
+            Logout
+          </Button>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col min-h-0">
+        {/* Header */}
+        <header className="bg-card border-b border-border px-8 py-6 flex-shrink-0">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-semibold text-foreground">
+                Welcome back, {userName}!
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                Ready to analyze your next project?
               </p>
             </div>
-          )}
-
-          {!showAnalyzeLink && !showDomainAnalysis && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-              <button
-                onClick={() => setShowAnalyzeLink(true)}
-                className="p-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-lg font-medium"
-              >
-                Analyze Link
-              </button>
-              <button
-                onClick={() => setShowDomainAnalysis(true)}
-                className="p-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-lg font-medium"
-              >
-                Domain Analysis
-              </button>
-
-              {brands.length > 0 ? (
-                <Link
-                  to={`/brand/${brands[0].id}/blog-scoring`}
-                  className="p-4 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-lg font-medium text-center flex items-center justify-center"
-                >
-                  Blog GEO Scoring
-                </Link>
-              ) : (
-                <button
-                  disabled
-                  className="p-4 bg-gray-400 text-white rounded-lg text-lg font-medium text-center flex items-center justify-center cursor-not-allowed"
-                >
-                  Blog GEO Scoring
-                </button>
-              )}
-            </div>
-          )}
-
-          {showAnalyzeLink && (
-            <div className="mb-6">
-              <form onSubmit={handleAnalyzeLink} className="flex flex-col sm:flex-row gap-4">
-                <input
-                  type="url"
-                  ref={linkRef}
-                  placeholder="Enter a URL to analyze"
-                  className="flex-1 p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                />
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  {loading ? 'Analyzing...' : 'Analyze Link'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowAnalyzeLink(false)}
-                  className="px-6 py-3 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
-                >
-                  Cancel
-                </button>
-              </form>
-            </div>
-          )}
-
-          {showDomainAnalysis && (
-            <DomainAnalysis onClose={() => setShowDomainAnalysis(false)} />
-          )}
-
-
-
-          {loading && (
-            <div className="flex justify-center my-8">
-              <LoadingSpinner size="large" message="Processing..." />
-            </div>
-          )}
-
-
-
-          {analyzeResult && (
-            <div className="mt-6 space-y-6">
-              <div className="bg-gray-50 rounded-lg p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-xl font-semibold text-gray-900">Analysis Result</h3>
-                  <button
-                    onClick={handleGetSuggestion}
-                    disabled={loading}
-                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {loading ? 'Getting Suggestions...' : 'Get AI Suggestions'}
-                  </button>
-                </div>
-                
-                <div className="bg-white rounded-lg p-4 max-h-96 overflow-y-auto">
-                  <pre className="text-sm text-gray-800 whitespace-pre-wrap">
-                    {JSON.stringify(analyzeResult, null, 2)}
-                  </pre>
-                </div>
-              </div>
-
-              {suggestion && (
-                <div className="bg-green-50 rounded-lg p-6">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4">AI Suggestions</h3>
-                  <div className="bg-white rounded-lg p-4 max-h-96 overflow-y-auto">
-                    <pre className="text-sm text-gray-800 whitespace-pre-wrap">
-                      {suggestion}
-                    </pre>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="flex justify-between items-center mt-8">
-            <button
-              onClick={fetchHistory}
-              className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
-            >
-              View History
-            </button>
-            <Link
-              to="/history"
-              className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
-            >
-              Full History
-            </Link>
           </div>
+        </header>
 
-          {showHistory && (
-            <div className="mt-6 bg-white border border-gray-200 rounded-lg p-6 max-h-96 overflow-y-auto">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-semibold text-gray-900">Analysis History</h3>
-                <button
-                  onClick={() => setShowHistory(false)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  ✕
-                </button>
-              </div>
-              
-              {history.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">No history found.</p>
-              ) : (
-                <div className="space-y-4">
-                  {history.map((item, idx) => (
-                    <div key={item._id || idx} className="border-b border-gray-200 pb-4 last:border-b-0">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <p className="font-medium text-gray-900">{item.url}</p>
-                          <p className="text-sm text-gray-500">
-                            {new Date(item.createdAt).toLocaleString()}
-                          </p>
+        {/* Content */}
+        <main className="flex-1 p-8 overflow-y-auto min-h-0">
+          {activeSection === 'dashboard' && (
+            <div className="space-y-8">
+              {!activeTool && (
+                <>
+                  {/* Action Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {/* Domain Analysis Card */}
+                    <Card 
+                      className="cursor-pointer hover:shadow-md transition-shadow border-0 bg-card"
+                      onClick={() => setActiveTool('domain')}
+                    >
+                      <CardContent className="p-6">
+                        <div className="flex items-center space-x-4 mb-4">
+                          <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                            <Globe className="w-6 h-6 text-primary" />
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-semibold text-foreground">
+                              Domain Analysis
+                            </h3>
+                            <p className="text-sm text-muted-foreground">
+                              Comprehensive brand insights
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                        <p className="text-sm text-muted-foreground">
+                          Analyze entire domains for competitive intelligence, brand positioning, and market opportunities.
+                        </p>
+                      </CardContent>
+                    </Card>
+
+                    {/* Blog Analysis Card */}
+                    <Card 
+                      className="cursor-pointer hover:shadow-md transition-shadow border-0 bg-card"
+                      onClick={() => setActiveTool('blog')}
+                    >
+                      <CardContent className="p-6">
+                        <div className="flex items-center space-x-4 mb-4">
+                          <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                            <FileText className="w-6 h-6 text-primary" />
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-semibold text-foreground">
+                              Blog Analysis
+                            </h3>
+                            <p className="text-sm text-muted-foreground">
+                        
+                            </p>
+                          </div>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Analyze blog content using our GEO framework for content optimization and scoring.
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Analyze Link Form */}
+                  {showAnalyzeLink && (
+                    <Card className="border-0 bg-card">
+                      <CardHeader>
+                        <CardTitle>Quick Link Analysis</CardTitle>
+                        <CardDescription>
+                          Enter a URL to get instant SEO insights
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <form onSubmit={handleDomainAnalysisSubmit} className="space-y-4">
+                          <div className="flex space-x-2">
+                            <Input
+                              type="url"
+                              placeholder="https://example.com"
+                              value={domainToAnalyze}
+                              onChange={(e) => setDomainToAnalyze(e.target.value)}
+                              className="flex-1"
+                            />
+                            <Button type="submit">Analyze</Button>
+                          </div>
+                        </form>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Quick Actions */}
+                  <div className="flex space-x-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowAnalyzeLink(!showAnalyzeLink)}
+                      className="flex items-center space-x-2"
+                    >
+                      <LinkIcon className="w-4 h-4" />
+                      <span>Quick Link Analysis</span>
+                    </Button>
+                  </div>
+                </>
               )}
+
+              {activeTool && renderInlineTool()}
             </div>
           )}
-        </div>
+
+          {activeSection === 'history' && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-2xl font-semibold text-foreground mb-2">Analysis History</h2>
+                <p className="text-muted-foreground">View your previous domain and blog analyses</p>
+              </div>
+              {/* History content would go here */}
+            </div>
+          )}
+
+          {activeSection === 'settings' && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-2xl font-semibold text-foreground mb-2">Settings</h2>
+                <p className="text-muted-foreground">Manage your account and preferences</p>
+              </div>
+              {/* Settings content would go here */}
+            </div>
+          )}
+        </main>
       </div>
     </div>
   );
