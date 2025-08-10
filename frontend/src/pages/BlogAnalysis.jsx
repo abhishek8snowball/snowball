@@ -89,15 +89,15 @@ const BlogAnalysis = ({ onClose, initialDomain = "", inline = false }) => {
           brandId = existingBrand.id;
           console.log('Using existing brand for blog analysis:', existingBrand);
         } else {
-          // Create a new brand analysis first
-          console.log('No existing brand found, creating new brand analysis...');
-          const brandResponse = await apiService.analyzeBrand({ domain: domain });
+          // Create a minimal brand profile without full analysis
+          console.log('No existing brand found, creating minimal brand profile...');
+          const brandResponse = await apiService.createMinimalBrand({ domain: domain });
           brandId = brandResponse.data.brandId;
-          console.log('New brand created for blog analysis:', brandId);
+          console.log('Minimal brand profile created for blog analysis:', brandId);
         }
       } catch (brandError) {
-        console.error('Error with brand analysis:', brandError);
-        // Continue with blog analysis even if brand analysis fails
+        console.error('Error with brand profile creation:', brandError);
+        // Continue with blog analysis even if brand profile creation fails
       }
 
       // Now perform blog analysis - ensure we have a brandId
@@ -231,10 +231,8 @@ const BlogAnalysis = ({ onClose, initialDomain = "", inline = false }) => {
         <div className="max-w-2xl mx-auto">
           <Card className="border-0 bg-card">
             <CardHeader className="text-center">
-              <CardTitle className="text-2xl">Blog Content Analysis</CardTitle>
-              <CardDescription>
-                Enter a domain or website URL to analyze its blog content using our GEO framework
-              </CardDescription>
+             
+              
             </CardHeader>
             <CardContent className="space-y-6">
               <form onSubmit={handleAnalyze} className="space-y-4">
@@ -244,15 +242,13 @@ const BlogAnalysis = ({ onClose, initialDomain = "", inline = false }) => {
                   </label>
                   <Input
                     type="text"
-                    placeholder="example.com or https://example.com"
+                    placeholder="example.com"
                     value={domain}
                     onChange={(e) => setDomain(e.target.value)}
                     className="h-12 text-base focus-ring-primary"
                     required
                   />
-                  <p className="text-xs text-muted-foreground">
-                    We'll analyze all blog content found on this domain
-                  </p>
+          
                 </div>
                 
                 <Button 
@@ -264,17 +260,7 @@ const BlogAnalysis = ({ onClose, initialDomain = "", inline = false }) => {
                 </Button>
               </form>
 
-              <div className="text-center space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  This analysis will:
-                </p>
-                <ul className="text-sm text-muted-foreground space-y-1">
-                  <li>• Extract blog URLs from the domain</li>
-                  <li>• Analyze content quality and structure</li>
-                  <li>• Calculate GEO optimization scores</li>
-                  <li>• Provide content improvement recommendations</li>
-                </ul>
-              </div>
+             
             </CardContent>
           </Card>
         </div>

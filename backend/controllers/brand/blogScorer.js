@@ -1,7 +1,12 @@
-const OpenAI = require("openai");
 const axios = require('axios');
+const cheerio = require('cheerio');
+const OpenAI = require('openai');
+const TokenCostLogger = require("../../utils/tokenCostLogger");
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+// Initialize token logger
+const tokenLogger = new TokenCostLogger();
 
 class BlogScorer {
   constructor() {
@@ -218,7 +223,7 @@ Provide 5 specific, actionable recommendations for improving this blog's GEO per
       console.log('🤖 Calling OpenAI API for GEO scoring...');
       
       const completion = await openai.chat.completions.create({
-        model: "gpt-4",
+        model: "gpt-3.5-turbo",
         messages: [
           {
             role: "system",
@@ -234,6 +239,18 @@ Provide 5 specific, actionable recommendations for improving this blog's GEO per
       });
       
       const aiResponse = completion.choices[0].message.content;
+      
+      // Log token usage and cost for blog scoring
+      const systemPrompt = "You are an expert SEO and AI content evaluation specialist. Analyze blogs for Generative Engine Optimization (GEO) effectiveness using the provided framework.";
+      const fullPrompt = `${systemPrompt}\n\n${prompt}`;
+      
+      tokenLogger.logOpenAICall(
+        'Blog GEO Scoring',
+        fullPrompt,
+        aiResponse,
+        'gpt-3.5-turbo'
+      );
+      
       console.log('✅ OpenAI API response received');
       
       // Step 4: Parse the AI response to extract scores and recommendations

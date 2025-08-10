@@ -1,39 +1,31 @@
 const PerplexityService = require("../../utils/perplexityService");
+const TokenCostLogger = require("../../utils/tokenCostLogger");
+
+// Initialize token logger
+const tokenLogger = new TokenCostLogger();
 
 exports.generateBrandDescription = async (openai, brand) => {
   try {
-    console.log(`🔍 Generating brand description using Perplexity for: ${brand.brandName} (${brand.domain})`);
+    console.log(`🔍 Checking for pre-extracted brand description for: ${brand.brandName} (${brand.domain})`);
     
-    const perplexityService = new PerplexityService();
-    
-    if (!perplexityService.apiKey) {
-      console.warn('⚠️ Perplexity API key not found, using OpenAI fallback');
-      return await generateDescriptionWithOpenAI(openai, brand);
-    }
-
-    const response = await perplexityService.getDomainInfo(brand.domain);
-    
-    // Clean up the response to make it more concise
-    let description = response.trim();
-    
-    // If the response is too long, truncate it
-    if (description.length > 200) {
-      const sentences = description.split(/[.!?]+/).filter(s => s.trim().length > 0);
-      if (sentences.length >= 2) {
-        description = sentences.slice(0, 2).join('. ') + '.';
-      } else {
-        description = description.substring(0, 200).trim();
-        if (!description.endsWith('.')) {
-          description += '...';
-        }
-      }
+    // Check if we already have a description from the first Perplexity call
+    if (global.extractedBrandDescription) {
+      console.log(`✅ Using pre-extracted brand description from first Perplexity call`);
+      const description = global.extractedBrandDescription;
+      
+      // Clean up the global variable
+      delete global.extractedBrandDescription;
+      
+      console.log(`✅ Brand description retrieved:`, description);
+      return description;
     }
     
-    console.log(`✅ Brand description generated with Perplexity:`, description);
-    return description;
+    // Fallback: If no pre-extracted description, use OpenAI
+    console.log(`⚠️ No pre-extracted description found, using OpenAI fallback`);
+    return await generateDescriptionWithOpenAI(openai, brand);
     
   } catch (error) {
-    console.error(`❌ Perplexity API error for brand description:`, error.message);
+    console.error(`❌ Error retrieving brand description:`, error.message);
     console.log(`🔄 Falling back to OpenAI for brand description`);
     return await generateDescriptionWithOpenAI(openai, brand);
   }
@@ -41,10 +33,22 @@ exports.generateBrandDescription = async (openai, brand) => {
 
 async function generateDescriptionWithOpenAI(openai, brand) {
   const descPrompt = `Write a concise 1-2 sentence description for the brand "${brand.brandName}" (${brand.domain}).`;
+  
   const descResp = await openai.chat.completions.create({
     model: "gpt-3.5-turbo",
     messages: [{ role: "user", content: descPrompt }],
     max_tokens: 100,
   });
-  return descResp.choices[0].message.content.trim();
+  
+  const responseContent = descResp.choices[0].message.content.trim();
+  
+  // Log token usage and cost for OpenAI fallback
+  tokenLogger.logOpenAICall(
+    'Brand Description (OpenAI Fallback)',
+    descPrompt,
+    responseContent,
+    'gpt-3.5-turbo'
+  );
+  
+  return responseContent;
 }

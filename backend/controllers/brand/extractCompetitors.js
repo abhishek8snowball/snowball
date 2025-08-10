@@ -1,5 +1,9 @@
 const AICompetitorMention = require("../../models/AICompetitorMention");
+const TokenCostLogger = require("../../utils/tokenCostLogger");
 const axios = require('axios');
+
+// Initialize token logger
+const tokenLogger = new TokenCostLogger();
 
 // Helper function to detect location from domain and content
 async function detectBrandLocation(domain, websiteContent) {
@@ -222,16 +226,26 @@ Do not include explanations or additional text, just the JSON array.`;
       temperature: 0.5
     });
     
-    console.log("OpenAI competitor response:", competitorResp.choices[0].message.content);
+    const responseContent = competitorResp.choices[0].message.content;
+    
+    // Log token usage and cost for competitor extraction
+    tokenLogger.logOpenAICall(
+      'Competitor Extraction',
+      competitorPrompt,
+      responseContent,
+      'gpt-3.5-turbo'
+    );
+    
+    console.log("OpenAI competitor response:", responseContent);
     
     let competitors = [];
     try {
-      competitors = JSON.parse(competitorResp.choices[0].message.content);
+      competitors = JSON.parse(responseContent);
       console.log("Parsed competitors JSON:", competitors);
     } catch (e) {
       console.error("Failed to parse competitors JSON:", e);
       // Fallback: extract from text
-      const content = competitorResp.choices[0].message.content;
+      const content = responseContent;
       competitors = content.match(/"([^"]+)"/g)?.map(s => s.replace(/"/g, "")) || [];
       console.log("Extracted competitors from text:", competitors);
     }

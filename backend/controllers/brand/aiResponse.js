@@ -1,4 +1,8 @@
 const PromptAIResponse = require("../../models/PromptAIResponse");
+const TokenCostLogger = require("../../utils/tokenCostLogger");
+
+// Initialize token logger
+const tokenLogger = new TokenCostLogger();
 
 exports.runPromptsAndSaveResponses = async (openai, prompts) => {
   const aiResponses = [];
@@ -15,8 +19,19 @@ IMPORTANT: In your response, make sure to explicitly mention the brand names tha
       messages: [{ role: "user", content: enhancedPrompt }],
       max_tokens: 500,
     });
-    console.log("OpenAI aiResp:", aiResp.choices[0].message.content);
-    const aiText = aiResp.choices[0].message.content;
+    
+    const responseContent = aiResp.choices[0].message.content;
+    
+    // Log token usage and cost for AI response generation
+    tokenLogger.logOpenAICall(
+      `AI Response - ${catDoc.categoryName}`,
+      enhancedPrompt,
+      responseContent,
+      'gpt-3.5-turbo'
+    );
+    
+    console.log("OpenAI aiResp:", responseContent);
+    const aiText = responseContent;
     const aiDoc = await PromptAIResponse.create({ promptId: promptDoc._id, responseText: aiText });
     aiResponses.push({ aiDoc, catDoc });
     console.log("PromptAIResponse created:", aiDoc);

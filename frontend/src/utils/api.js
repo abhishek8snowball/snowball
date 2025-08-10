@@ -112,6 +112,14 @@ export const apiService = {
     });
   },
 
+  // Create minimal brand profile for blog analysis (without full analysis)
+  createMinimalBrand: (data) => {
+    console.log('Creating minimal brand profile for:', data.domain);
+    return api.post('/api/v1/brand/create-minimal-brand', data, {
+      timeout: 30000, // 30 seconds for brand profile creation
+    });
+  },
+  
   // Trigger blog analysis for domain analysis
   triggerBlogAnalysis: (brandId) => {
     console.log('Triggering blog analysis for brandId:', brandId);

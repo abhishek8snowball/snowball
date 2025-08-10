@@ -32,4 +32,7 @@ router.post("/extract-blogs", auth, brandController.extractBlogs);
 // Blog analysis trigger for domain analysis
 router.post("/:brandId/trigger-blog-analysis", auth, brandController.triggerBlogAnalysis);
 
+// Create minimal brand profile for blog analysis (without full analysis)
+router.post("/create-minimal-brand", auth, brandController.createMinimalBrand);
+
 module.exports = router;

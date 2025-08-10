@@ -18,6 +18,41 @@ exports.extractBlogs = require("./brand/blogExtraction").extractBlogs;
 // Blog analysis trigger for domain analysis
 exports.triggerBlogAnalysis = require("./brand/blogAnalysis").triggerBlogAnalysis;
 
+// Create minimal brand profile for blog analysis (without full analysis)
+exports.createMinimalBrand = async (req, res) => {
+  try {
+    const { domain, brandName } = req.body;
+    const userId = req.user.id;
+
+    console.log(`🔧 Creating minimal brand profile for blog analysis: ${domain}`);
+
+    if (!domain) {
+      return res.status(400).json({ msg: "Domain is required" });
+    }
+
+    // Check if brand already exists
+    const { findOrCreateBrandProfile } = require("./brand/brandProfile");
+    const brand = await findOrCreateBrandProfile({ domain, brandName, userId });
+
+    console.log(`✅ Minimal brand profile created/retrieved: ${brand.brandName} (${brand._id})`);
+
+    res.json({
+      success: true,
+      brandId: brand._id,
+      brandName: brand.brandName,
+      domain: brand.domain,
+      message: "Brand profile ready for blog analysis"
+    });
+
+  } catch (error) {
+    console.error("❌ Error creating minimal brand profile:", error);
+    res.status(500).json({ 
+      msg: "Failed to create brand profile", 
+      error: error.message 
+    });
+  }
+};
+
 // Get user's brands with proper ownership validation
 exports.getUserBrands = async (req, res) => {
   try {

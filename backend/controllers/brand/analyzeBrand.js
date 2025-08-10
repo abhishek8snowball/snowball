@@ -1,5 +1,6 @@
 const OpenAI = require("openai");
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const TokenCostLogger = require("../../utils/tokenCostLogger");
 
 const { findOrCreateBrandProfile } = require("./brandProfile");
 const { extractCategories, saveCategories } = require("./category");
@@ -14,6 +15,9 @@ const { calculateShareOfVoice } = require("./shareOfVoice");
 const BrandMatcher = require('./brandMatcher');
 const EntityRecognizer = require('./entityRecognizer');
 
+// Initialize token logger for cost tracking
+const tokenLogger = new TokenCostLogger();
+
 exports.analyzeBrand = async (req, res) => {
   console.log("=== 🚀 Starting Brand Analysis ===");
   console.log("📋 Request body:", req.body);
@@ -21,6 +25,9 @@ exports.analyzeBrand = async (req, res) => {
   const userId = req.user.id;
 
   if (!domain) return res.status(400).json({ msg: "Domain is required" });
+
+  // Log analysis session start
+  tokenLogger.logAnalysisStart(domain, brandName || domain);
 
   try {
     // 1. Brand profile
@@ -128,6 +135,18 @@ exports.analyzeBrand = async (req, res) => {
     console.log("   - Share of Voice:", sovResult.brandShare || 0, "%");
     console.log("   - Blogs: Use separate blog extraction endpoint");
 
+    // Log cost summary
+    console.log("=== 💰 API Cost Summary ===");
+    const costSummary = tokenLogger.getSummary();
+    console.log("   - Perplexity Pricing:", costSummary.perplexityPricing);
+    console.log("   - OpenAI Pricing:", costSummary.openaiPricing);
+    console.log("   - Log File:", costSummary.logFile);
+    console.log("   - Note:", costSummary.note);
+    console.log("   - Check individual API call logs above for detailed costs");
+
+    // Log analysis session end
+    tokenLogger.logAnalysisEnd();
+
     res.json({
       brand: brand.brandName,
       domain: brand.domain,
@@ -140,12 +159,21 @@ exports.analyzeBrand = async (req, res) => {
       totalMentions: sovResult.totalMentions,
       brandShare: sovResult.brandShare,
       blogAnalysis, // Add blog analysis results
-      status: "Analysis complete."
+      status: "Analysis complete.",
+      costInfo: {
+        note: "Check server logs and log file for detailed token usage and cost breakdown for each API call",
+        logFile: costSummary.logFile,
+        pricing: costSummary
+      }
     });
   } catch (err) {
     console.error("=== 💥 Domain Analysis Error ===");
     console.error("❌ Error details:", err);
     console.error("📚 Stack trace:", err.stack);
+    
+    // Log analysis session end with error
+    tokenLogger.logAnalysisEnd();
+    
     res.status(500).json({ 
       msg: "Domain analysis failed", 
       error: err.message, 

@@ -1,21 +1,33 @@
 const BrandCategory = require("../../models/BrandCategory");
 const PerplexityService = require("../../utils/perplexityService");
+const TokenCostLogger = require("../../utils/tokenCostLogger");
 
-// Initialize Perplexity service
+// Initialize services
 const perplexityService = new PerplexityService();
+const tokenLogger = new TokenCostLogger();
 
 exports.extractCategories = async (domain) => {
-  // Get domain information from Perplexity API
+  // Get domain information and description from Perplexity API
   let domainInfo = '';
+  let brandDescription = '';
   
   try {
-    console.log(`🔍 Getting domain information from Perplexity for: ${domain}`);
-    domainInfo = await perplexityService.getDomainInfo(domain);
-    console.log(`Successfully retrieved domain info from Perplexity`);
+    console.log(`🔍 Getting domain information and description from Perplexity for: ${domain}`);
+    const response = await perplexityService.getDomainInfo(domain);
+    domainInfo = response.domainInfo;
+    brandDescription = response.description;
+    console.log(`Successfully retrieved domain info and description from Perplexity`);
     console.log("Domain info:", domainInfo);
+    console.log("Brand description:", brandDescription);
+    
+    // Store the description globally for later use
+    global.extractedBrandDescription = brandDescription;
+    
   } catch (error) {
     console.error(`Failed to get domain info from Perplexity for ${domain}:`, error.message);
     domainInfo = `Information about ${domain} - a business website offering various services and solutions.`;
+    brandDescription = `${domain} is a business website that provides various services and solutions to its customers.`;
+    global.extractedBrandDescription = brandDescription;
   }
 
   const catPrompt = `You are a data extraction engine that identifies a company's main customer-facing business categories based on the text provided.
@@ -29,7 +41,8 @@ Instructions:
 - Avoid vague, internal, or technical terms that are not customer-facing.
 
 Output:
-Return a JSON array of 4–6 category names with no explanation or extra formatting.`;
+Return a JSON array of 4 category names with no explanation or extra formatting.`;
+  
   // Use OpenAI API for category extraction
   const OpenAI = require('openai');
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -56,15 +69,25 @@ Return a JSON array of 4–6 category names with no explanation or extra formatt
       temperature: 0.1
     });
     
+    const responseContent = catResp.choices[0].message.content;
+    
+    // Log token usage and cost for OpenAI
+    tokenLogger.logOpenAICall(
+      'Category Extraction',
+      catPrompt,
+      responseContent,
+      'gpt-3.5-turbo'
+    );
+    
     console.log("✅ OpenAI API response received");
-    console.log("OpenAI catResp:", catResp.choices[0].message.content);
+    console.log("OpenAI catResp:", responseContent);
     
     let categories = [];
     try {
-      categories = JSON.parse(catResp.choices[0].message.content);
+      categories = JSON.parse(responseContent);
     } catch (e) {
-      console.error("Failed to parse categories JSON:", catResp.choices[0].message.content);
-      categories = catResp.choices[0].message.content.match(/"([^"]+)"/g)?.map(s => s.replace(/"/g, "")) || [];
+      console.error("Failed to parse categories JSON:", responseContent);
+      categories = responseContent.match(/"([^"]+)"/g)?.map(s => s.replace(/"/g, "")) || [];
     }
     return categories.slice(0, 4);
     

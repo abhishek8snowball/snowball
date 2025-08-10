@@ -151,13 +151,13 @@ const Landing = () => {
               🚀 Now with AI-powered insights
             </Badge>
             
-            <h1 className="text-4xl md:text-6xl font-bold text-[#4a4a6a] leading-tight">
+            <h1 className="text-4xl md:text-6xl font-bold text-black leading-tight">
               Analyze and optimize your{' '}
               <span className="text-gradient-primary">blog content</span>{' '}
               with AI-powered insights
             </h1>
             
-            <p className="text-xl text-[#4a4a6a] max-w-3xl mx-auto leading-relaxed">
+            <p className="text-xl text-black max-w-3xl mx-auto leading-relaxed">
               Transform your content strategy with advanced AI analysis. Get detailed scoring, 
               SEO recommendations, and actionable insights to improve your blog performance.
             </p>
@@ -184,8 +184,8 @@ const Landing = () => {
                       <BarChart3 className="w-8 h-8 text-white" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-[#4a4a6a]">Snowball Dashboard Preview</h3>
-                      <p className="text-sm text-[#4a4a6a]">Advanced analytics and insights at your fingertips</p>
+                      <h3 className="text-lg font-semibold text-black">Snowball Dashboard Preview</h3>
+                      <p className="text-sm text-black">Advanced analytics and insights at your fingertips</p>
                     </div>
                   </div>
                 </div>
@@ -199,10 +199,10 @@ const Landing = () => {
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-[#f8f9ff] via-white to-[#f0f2ff]">
         <div className="max-w-7xl mx-auto">
           <div className="text-center space-y-4 mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-[#4a4a6a]">
+            <h2 className="text-3xl md:text-4xl font-bold text-black">
               Everything you need to optimize your content
             </h2>
-            <p className="text-lg text-[#4a4a6a] max-w-2xl mx-auto">
+            <p className="text-lg text-black max-w-2xl mx-auto">
               Powerful features designed to help you create better content and grow your audience.
             </p>
           </div>
@@ -216,10 +216,10 @@ const Landing = () => {
                       {feature.icon}
                     </div>
                   </div>
-                  <h3 className="text-lg font-semibold text-[#4a4a6a] mb-2">
+                  <h3 className="text-lg font-semibold text-black mb-2">
                     {feature.title}
                   </h3>
-                  <p className="text-sm text-[#4a4a6a]">
+                  <p className="text-sm text-black">
                     {feature.description}
                   </p>
                 </CardContent>
@@ -233,10 +233,10 @@ const Landing = () => {
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-white via-[#f8f9ff] to-white">
         <div className="max-w-7xl mx-auto">
           <div className="text-center space-y-4 mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-[#4a4a6a]">
+            <h2 className="text-3xl md:text-4xl font-bold text-black">
               How it works
             </h2>
-            <p className="text-lg text-[#4a4a6a] max-w-2xl mx-auto">
+            <p className="text-lg text-black max-w-2xl mx-auto">
               Get started in minutes with our simple three-step process.
             </p>
           </div>
@@ -257,10 +257,10 @@ const Landing = () => {
                   )}
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-[#4a4a6a] mb-2">
+                  <h3 className="text-lg font-semibold text-black mb-2">
                     {step.title}
                   </h3>
-                  <p className="text-sm text-[#4a4a6a]">
+                  <p className="text-sm text-black">
                     {step.description}
                   </p>
                 </div>
@@ -274,10 +274,10 @@ const Landing = () => {
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-[#f0f2ff] via-[#f8f9ff] to-white">
         <div className="max-w-7xl mx-auto">
           <div className="text-center space-y-4 mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-[#4a4a6a]">
+            <h2 className="text-3xl md:text-4xl font-bold text-black">
               Loved by content creators worldwide
             </h2>
-            <p className="text-lg text-[#4a4a6a] max-w-2xl mx-auto">
+            <p className="text-lg text-black max-w-2xl mx-auto">
               See what our users are saying about Snowball.
             </p>
           </div>
@@ -291,7 +291,7 @@ const Landing = () => {
                       <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                     ))}
                   </div>
-                  <p className="text-sm text-[#4a4a6a] mb-4">
+                  <p className="text-sm text-black mb-4">
                     "{testimonial.text}"
                   </p>
                   <div className="flex items-center space-x-3">
@@ -299,8 +299,8 @@ const Landing = () => {
                       <span className="text-sm font-semibold text-white">{testimonial.avatar}</span>
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-[#4a4a6a]">{testimonial.name}</p>
-                      <p className="text-xs text-[#4a4a6a]">{testimonial.role} at {testimonial.company}</p>
+                      <p className="text-sm font-semibold text-black">{testimonial.name}</p>
+                      <p className="text-xs text-black">{testimonial.role} at {testimonial.company}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -315,10 +315,10 @@ const Landing = () => {
         <div className="max-w-4xl mx-auto text-center">
           <Card className="border border-[#b0b0d8] bg-gradient-to-br from-white to-[#f8f9ff] shadow-lg">
             <CardContent className="p-12">
-              <h2 className="text-3xl md:text-4xl font-bold text-[#4a4a6a] mb-4">
+              <h2 className="text-3xl md:text-4xl font-bold text-black mb-4">
                 Ready to transform your content?
               </h2>
-              <p className="text-lg text-[#4a4a6a] mb-8 max-w-2xl mx-auto">
+              <p className="text-lg text-black mb-8 max-w-2xl mx-auto">
                 Join thousands of content creators who are already using Snowball to improve their blog performance.
               </p>
               <Button size="lg" onClick={handleGetStarted} className="text-base px-8 py-3 gradient-primary hover:shadow-lg transition-all duration-200 text-white">
@@ -340,9 +340,9 @@ const Landing = () => {
                 <div className="w-8 h-8 gradient-primary rounded-lg flex items-center justify-center">
                   <span className="text-sm font-bold text-white">S</span>
                 </div>
-                <span className="text-lg font-semibold text-[#4a4a6a]">Snowball</span>
+                <span className="text-lg font-semibold text-black">Snowball</span>
               </div>
-              <p className="text-sm text-[#4a4a6a]">
+              <p className="text-sm text-black">
                 AI-powered content analysis and optimization platform.
               </p>
               <div className="flex space-x-4">
@@ -360,7 +360,7 @@ const Landing = () => {
 
             {/* Product */}
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold text-[#4a4a6a]">Product</h3>
+              <h3 className="text-sm font-semibold text-black">Product</h3>
               <div className="space-y-2">
                 <Link to="/dashboard" className="block text-sm text-[#4a4a6a] hover:text-[#6658f4] transition-colors">
                   Blog Analysis
@@ -379,7 +379,7 @@ const Landing = () => {
 
             {/* Company */}
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold text-[#4a4a6a]">Company</h3>
+              <h3 className="text-sm font-semibold text-black">Company</h3>
               <div className="space-y-2">
                 <a href="#" className="block text-sm text-[#4a4a6a] hover:text-[#6658f4] transition-colors">
                   About
@@ -398,7 +398,7 @@ const Landing = () => {
 
             {/* Legal */}
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold text-[#4a4a6a]">Legal</h3>
+              <h3 className="text-sm font-semibold text-black">Legal</h3>
               <div className="space-y-2">
                 <a href="#" className="block text-sm text-[#4a4a6a] hover:text-[#6658f4] transition-colors">
                   Privacy Policy
@@ -417,7 +417,7 @@ const Landing = () => {
           </div>
 
           <div className="border-t border-[#b0b0d8] mt-12 pt-8 text-center">
-            <p className="text-sm text-[#4a4a6a]">
+            <p className="text-sm text-black">
               © 2024 Snowball. All rights reserved.
             </p>
           </div>

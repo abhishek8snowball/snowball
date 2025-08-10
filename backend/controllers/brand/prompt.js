@@ -1,4 +1,8 @@
 const CategorySearchPrompt = require("../../models/CategorySearchPrompt");
+const TokenCostLogger = require("../../utils/tokenCostLogger");
+
+// Initialize token logger
+const tokenLogger = new TokenCostLogger();
 
 exports.generateAndSavePrompts = async (openai, catDocs, brand, competitors = []) => {
   console.log(`🔄 Starting simplified two-step prompt generation for ${catDocs.length} categories`);
@@ -30,6 +34,15 @@ Focus on:
       });
 
       const keywordContent = keywordResponse.choices[0].message.content;
+      
+      // Log token usage and cost for keyword generation
+      tokenLogger.logOpenAICall(
+        `Keyword Generation - ${catDoc.categoryName}`,
+        keywordPrompt,
+        keywordContent,
+        'gpt-3.5-turbo'
+      );
+      
       console.log("OpenAI keyword response:", keywordContent);
 
       // Parse keywords from response
@@ -95,13 +108,28 @@ Format: Output only a JSON array of 5 strings.`;
         messages: [{ role: "user", content: promptGen }],
         max_tokens: 300,
       });
-      console.log("OpenAI promptResp:", promptResp.choices[0].message.content);
+      
+      const promptContent = promptResp.choices[0].message.content;
+      
+      // Log token usage and cost for prompt generation
+      tokenLogger.logOpenAICall(
+        `Prompt Generation - ${catDoc.categoryName}`,
+        promptGen,
+        promptContent,
+        'gpt-3.5-turbo'
+      );
+      
+      console.log("OpenAI promptResp:", promptContent);
       let promptArr = [];
       try {
-        promptArr = JSON.parse(promptResp.choices[0].message.content);
-      } catch (e) {
-        console.error("Failed to parse prompts JSON:", promptResp.choices[0].message.content);
-        promptArr = promptResp.choices[0].message.content.match(/"([^"]+)"/g)?.map(s => s.replace(/"/g, "")) || [];
+        promptArr = JSON.parse(promptContent);
+      } catch (parseError) {
+        console.log("⚠️ JSON parsing failed for prompts, extracting with regex");
+        // Fallback: Extract quoted strings
+        const quotedStrings = promptContent.match(/"([^"]+)"/g);
+        if (quotedStrings) {
+          promptArr = quotedStrings.map(s => s.replace(/"/g, ""));
+        }
       }
       promptArr = promptArr.slice(0, 5);
       console.log(`📋 Generated ${promptArr.length} prompts for category ${catDoc.categoryName}`);

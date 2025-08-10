@@ -1,9 +1,11 @@
 const axios = require('axios');
+const TokenCostLogger = require('./tokenCostLogger');
 
 class BlogExtractionService {
   constructor() {
     this.apiKey = process.env.PERPLEXITY_API_KEY;
     this.baseURL = 'https://api.perplexity.ai';
+    this.tokenLogger = new TokenCostLogger();
   }
 
   async extractTopBlogs(domain) {
@@ -54,6 +56,15 @@ Make sure to return exactly 10 URLs. Do not include any explanations or addition
       console.log('✅ Perplexity API response received');
       
       const content = response.data.choices[0].message.content;
+      
+      // Log token usage and cost
+      this.tokenLogger.logPerplexityCall(
+        'Blog URL Extraction',
+        prompt,
+        content,
+        'sonar-pro'
+      );
+      
       console.log('📝 Raw response:', content);
 
       // Extract URLs from the response
