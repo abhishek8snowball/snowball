@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snowball Design System - Component Showcase</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#F8F9FF',
+                            100: '#E4E7FF',
+                            200: '#C7CCFF',
+                            300: '#A4ABFF',
+                            400: '#7C84FF',
+                            500: '#6366F1',
+                            600: '#5E6AD2',
+                            700: '#4E54C8',
+                            800: '#3F44B3',
+                            900: '#2D3142',
+                        },
+                        gray: {
+                            50: '#F9FAFB',
+                            100: '#F3F4F6',
+                            200: '#E5E7EB',
+                            300: '#D1D5DB',
+                            400: '#9CA3AF',
+                            500: '#6B7280',
+                            600: '#4B5563',
+                            700: '#374151',
+                            800: '#1F2937',
+                            900: '#111827',
+                        },
+                        success: '#10B981',
+                        warning: '#F59E0B',
+                        error: '#EF4444',
+                        info: '#3B82F6',
+                    },
+                    fontSize: {
+                        'display': ['32px', { lineHeight: '1.25', fontWeight: '300' }],
+                        'h1': ['28px', { lineHeight: '1.25', fontWeight: '600' }],
+                        'h2': ['24px', { lineHeight: '1.25', fontWeight: '600' }],
+                        'h3': ['20px', { lineHeight: '1.25', fontWeight: '600' }],
+                        'h4': ['18px', { lineHeight: '1.25', fontWeight: '500' }],
+                        'large': ['16px', { lineHeight: '1.4', fontWeight: '400' }],
+                        'base': ['14px', { lineHeight: '1.4', fontWeight: '400' }],
+                        'small': ['12px', { lineHeight: '1.4', fontWeight: '400' }],
+                        'tiny': ['11px', { lineHeight: '1.4', fontWeight: '400' }],
+                    },
+                    borderRadius: {
+                        'sm': '4px',
+                        'md': '6px',
+                        'lg': '8px',
+                        'xl': '12px',
+                    },
+                    boxShadow: {
+                        'sm': '0 1px 2px rgba(0, 0, 0, 0.05)',
+                        'base': '0 1px 3px rgba(0, 0, 0, 0.1)',
+                        'md': '0 4px 6px rgba(0, 0, 0, 0.07)',
+                        'lg': '0 10px 15px rgba(0, 0, 0, 0.1)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .component-section {
+            scroll-margin-top: 2rem;
+        }
+        .code-block {
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.875rem;
+            overflow-x: auto;
+        }
+        .nav-link {
+            transition: all 0.2s ease;
+        }
+        .nav-link:hover {
+            color: #6366f1;
+            transform: translateX(4px);
+        }
+        .component-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <div class="w-8 h-8 bg-primary-500 rounded-lg flex items-center justify-center">
+                        <span class="text-white font-bold text-lg">S</span>
+                    </div>
+                    <h1 class="ml-3 text-xl font-semibold text-gray-900">Snowball Design System</h1>
+                </div>
+                <nav class="hidden md:flex space-x-8">
+                    <a href="#typography" class="nav-link text-gray-600 hover:text-primary-600">Typography</a>
+                    <a href="#layout" class="nav-link text-gray-600 hover:text-primary-600">Layout</a>
+                    <a href="#forms" class="nav-link text-gray-600 hover:text-primary-600">Forms</a>
+                    <a href="#data-display" class="nav-link text-gray-600 hover:text-primary-600">Data Display</a>
+                    <a href="#feedback" class="nav-link text-gray-600 hover:text-primary-600">Feedback</a>
+                    <a href="#overlays" class="nav-link text-gray-600 hover:text-primary-600">Overlays</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Introduction -->
+        <section class="mb-16">
+            <div class="text-center">
+                <h1 class="text-4xl font-bold text-gray-900 mb-4">Design System Components</h1>
+                <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+                    A comprehensive showcase of all UI components used in the Snowball platform. 
+                    Built with Tailwind CSS and following modern design principles.
+                </p>
+            </div>
+        </section>
+
+        <!-- Typography Section -->
+        <section id="typography" class="component-section mb-16">
+            <h2 class="text-3xl font-bold text-gray-900 mb-8">Typography</h2>
+            <div class="bg-white rounded-lg border border-gray-200 p-8">
+                <div class="space-y-6">
+                    <div>
+                        <h1 class="text-4xl font-light text-gray-900">Display Text (32px, Light)</h1>
+                        <p class="text-sm text-gray-500 mt-2">Font size: display, Weight: 300</p>
+                    </div>
+                    <div>
+                        <h1 class="text-3xl font-semibold text-gray-900">Heading 1 (28px, Semibold)</h1>
+                        <p class="text-sm text-gray-500 mt-2">Font size: h1, Weight: 600</p>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-semibold text-gray-900">Heading 2 (24px, Semibold)</h2>
+                        <p class="text-sm text-gray-500 mt-2">Font size: h2, Weight: 600</p>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-semibold text-gray-900">Heading 3 (20px, Semibold)</h3>
+                        <p class="text-sm text-gray-500 mt-2">Font size: h3, Weight: 600</p>
+                    </div>
+                    <div>
+                        <h4 class="text-lg font-medium text-gray-900">Heading 4 (18px, Medium)</h4>
+                        <p class="text-sm text-gray-500 mt-2">Font size: h4, Weight: 500</p>
+                    </div>
+                    <div>
+                        <p class="text-base text-gray-900">Body Large (16px, Normal)</p>
+                        <p class="text-sm text-gray-500 mt-2">Font size: large, Weight: 400</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-900">Body Base (14px, Normal)</p>
+                        <p class="text-sm text-gray-500 mt-2">Font size: base, Weight: 400</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-900">Body Small (12px, Normal)</p>
+                        <p class="text-sm text-gray-500 mt-2">Font size: small, Weight: 400</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-900" style="font-size: 11px;">Body Tiny (11px, Normal)</p>
+                        <p class="text-sm text-gray-500 mt-2">Font size: tiny, Weight: 400</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Layout Section -->
+        <section id="layout" class="component-section mb-16">
+            <h2 class="text-3xl font-bold text-gray-900 mb-8">Layout Components</h2>
+            <div class="space-y-8">
+                <!-- Container -->
+                <div class="bg-white rounded-lg border border-gray-200 p-8">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-4">Container</h3>
+                    <div class="bg-gray-100 p-4 rounded border">
+                        <div class="max-w-4xl mx-auto bg-white p-6 rounded border">
+                            <p class="text-center text-gray-600">Container with max-width and centered content</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grid -->
+                <div class="bg-white rounded-lg border border-gray-200 p-8">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-4">Grid System</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-primary-100 p-4 rounded text-center text-primary-800">Column 1</div>
+                        <div class="bg-primary-200 p-4 rounded text-center text-primary-800">Column 2</div>
+                        <div class="bg-primary-300 p-4 rounded text-center text-primary-800">Column 3</div>
+                    </div>
+                </div>
+
+                <!-- Stack -->
+                <div class="bg-white rounded-lg border border-gray-200 p-8">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-4">Stack Layouts</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                            <h4 class="font-medium text-gray-700 mb-3">Vertical Stack</h4>
+                            <div class="space-y-3">
+                                <div class="bg-gray-100 p-3 rounded">Item 1</div>
+                                <div class="bg-gray-100 p-3 rounded">Item 2</div>
+                                <div class="bg-gray-100 p-3 rounded">Item 3</div>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 class="font-medium text-gray-700 mb-3">Horizontal Stack</h4>
+                            <div class="flex space-x-3">
+                                <div class="bg-gray-100 p-3 rounded">Item 1</div>
+                                <div class="bg-gray-100 p-3 rounded">Item 2</div>
+                                <div class="bg-gray-100 p-3 rounded">Item 3</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Forms Section -->
+        <section id="forms" class="component-section mb-16">
+            <h2 class="text-3xl font-bold text-gray-900 mb-8">Form Components</h2>
+            <div class="space-y-8">
+                <!-- Buttons -->
+                <div class="bg-white rounded-lg border border-gray-200 p-8">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-6">Buttons</h3>
+                    <div class="space-y-6">
+                        <div>
+                            <h4 class="font-medium text-gray-700 mb-3">Variants</h4>
+                            <div class="flex flex-wrap gap-3">
+                                <button class="bg-primary-500 text-white px-4 py-2 rounded-md font-medium hover:bg-primary-600 shadow-sm hover:shadow-md transition-all duration-200">Default</button>
+                                <button class="bg-gray-100 text-gray-900 px-4 py-2 rounded-md font-medium hover:bg-gray-200 shadow-sm hover:shadow-md transition-all duration-200 border border-gray-300">Secondary</button>
+                                <button class="border border-gray-300 bg-white text-gray-900 px-4 py-2 rounded-md font-medium hover:bg-gray-50 shadow-sm hover:shadow-md transition-all duration-200">Outline</button>
+                                <button class="text-primary-500 px-4 py-2 rounded-md font-medium hover:bg-gray-100 transition-all duration-200">Ghost</button>
+                                <button class="text-primary-500 underline px-4 py-2 font-medium hover:underline-offset-4 transition-all duration-200">Link</button>
+                                <button class="bg-red-500 text-white px-4 py-2 rounded-md font-medium hover:bg-red-600 shadow-sm hover:shadow-md transition-all duration-200">Destructive</button>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 class="font-medium text-gray-700 mb-3">Sizes</h4>
+                            <div class="flex items-center gap-3">
+                                <button class="bg-primary-500 text-white px-3 py-1 rounded text-sm h-8">Small</button>
+                                <button class="bg-primary-500 text-white px-4 py-2 rounded h-10">Default</button>
+                                <button class="bg-primary-500 text-white px-8 py-3 rounded text-lg h-12">Large</button>
+                                <button class="bg-primary-500 text-white p-2 rounded h-10 w-10">Icon</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Inputs -->
+                <div class="bg-white rounded-lg border border-gray-200 p-8">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-6">Input Fields</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Basic Input</label>
+                            <input type="text" placeholder="Enter text..." class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Input with Addon</label>
+                            <div class="flex">
+                                <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">@</span>
+                                <input type="text" placeholder="username" class="flex-1 px-3 py-2 border border-gray-300 rounded-r-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Textarea</label>
+                            <textarea placeholder="Enter description..." rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Select</label>
+                            <select class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                                <option>Select an option</option>
+                                <option>Option 1</option>
+                                <option>Option 2</option>
+                                <option>Option 3</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Controls -->
+                <div class="bg-white rounded-lg border border-gray-200 p-8">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-6">Form Controls</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <h4 class="font-medium text-gray-700 mb-3">Checkboxes</h4>
+                            <div class="space-y-2">
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded">
+                                    <span class="ml-2 text-sm text-gray-700">Option 1</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded">
+                                    <span class="ml-2 text-sm text-gray-700">Option 2</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 class="font-medium text-gray-700 mb-3">Radio Buttons</h4>
+                            <div class="space-y-2">
+                                <label class="flex items-center">
+                                    <input type="radio" name="radio-group" class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300">
+                                    <span class="ml-2 text-sm text-gray-700">Choice A</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="radio" name="radio-group" class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300">
+                                    <span class="ml-2 text-sm text-gray-700">Choice B</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 class="font-medium text-gray-700 mb-3">Switch</h4>
+                            <div class="space-y-2">
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="sr-only">
+                                    <div class="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-200 transition-colors focus-within:outline-none focus-within:ring-2 focus-within:ring-primary-500 focus-within:ring-offset-2">
+                                        <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-1"></span>
+                                    </div>
+                                    <span class="ml-2 text-sm text-gray-700">Toggle feature</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Data Display Section -->
+        <section id="data-display" class="component-section mb-16">
+            <h2 class="text-3xl font-bold text-gray-900 mb-8">Data Display Components</h2>
+            <div class="space-y-8">
+                <!-- Cards -->
+                <div class="bg-white rounded-lg border border-gray-200 p-8">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-6">Cards</h3>
+                    <div class="component-grid">
+                        <div class="rounded-lg border bg-white text-gray-900 shadow-sm">
+                            <div class="flex flex-col space-y-1.5 p-6">
+                                <h3 class="text-2xl font-semibold leading-none tracking-tight">Card Title</h3>
+                                <p class="text-sm text-gray-500">Card description goes here</p>
+                            </div>
+                            <div class="p-6 pt-0">
+                                <p class="text-gray-600">This is the main content of the card. It can contain any type of content including text, images, or other components.</p>
+                            </div>
+                            <div class="flex items-center p-6 pt-0">
+                                <button class="bg-primary-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-primary-600">Action</button>
+                            </div>
+                        </div>
+                        <div class="rounded-lg border bg-white text-gray-900 shadow-sm">
+                            <div class="p-6">
+                                <div class="flex items-center space-x-4">
+                                    <div class="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center">
+                                        <span class="text-primary-600 font-semibold">A</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-medium text-gray-900">Avatar Card</h4>
+                                        <p class="text-sm text-gray-500">With avatar and content</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Badges -->
+                <div class="bg-white rounded-lg border border-gray-200 p-8">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-6">Badges</h3>
+                    <div class="flex flex-wrap gap-3">
+                        <span class="inline-flex items-center rounded-full bg-primary-100 px-2.5 py-0.5 text-xs font-medium text-primary-800">Primary</span>
+                        <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">Secondary</span>
+                        <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">Success</span>
+                        <span class="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800">Warning</span>
+                        <span class="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">Error</span>
+                        <span class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">Info</span>
+                    </div>
+                </div>
+
+                <!-- Tables -->
+                <div class="bg-white rounded-lg border border-gray-200 p-8">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-6">Tables</h3>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">John Doe</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">Active</span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Admin</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        <button class="text-primary-600 hover:text-primary-900">Edit</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Jane Smith</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800">Pending</span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">User</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        <button class="text-primary-600 hover:text-primary-900">Edit</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <div class="bg-white rounded-lg border border-gray-200 p-8">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-6">Tabs</h3>
+                    <div class="border-b border-gray-200">
+                        <nav class="-mb-px flex space-x-8">
+                            <button class="border-primary-500 text-primary-600 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">Overview</button>
+                            <button class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">Analytics</button>
+                            <button class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">Reports</button>
+                        </nav>
+                    </div>
+                    <div class="mt-4">
+                        <p class="text-gray-600">Tab content goes here. This is the overview tab content.</p>
+                    </div>
+                </div>
+
+                <!-- Avatar -->
+                <div class="bg-white rounded-lg border border-gray-200 p-8">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-6">Avatars</h3>
+                    <div class="flex items-center space-x-4">
+                        <div class="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center">
+                            <span class="text-primary-600 font-semibold text-lg">JD</span>
+                        </div>
+                        <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                            <span class="text-gray-600 font-semibold text-xl">JS</span>
+                        </div>
+                        <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
+                            <span class="text-green-600 font-semibold text-2xl">AB</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Feedback Section -->
+        <section id="feedback" class="component-section mb-16">
+            <h2 class="text-3xl font-bold text-gray-900 mb-8">Feedback Components</h2>
+            <div class="space-y-8">
+                <!-- Alerts -->
+                <div class="bg-white rounded-lg border border-gray-200 p-8">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-6">Alerts</h3>
+                    <div class="space-y-4">
+                        <div class="rounded-md bg-blue-50 p-4">
+                            <div class="flex">
+                                <div class="flex-shrink-0">
+                                    <svg class="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                                    </svg>
+                                </div>
+                                <div class="ml-3">
+                                    <h3 class="text-sm font-medium text-blue-800">Info Alert</h3>
+                                    <div class="mt-2 text-sm text-blue-700">
+                                        <p>This is an informational alert. It provides useful information to the user.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rounded-md bg-green-50 p-4">
+                            <div class="flex">
+                                <div class="flex-shrink-0">
+                                    <svg class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                    </svg>
+                                </div>
+                                <div class="ml-3">
+                                    <h3 class="text-sm font-medium text-green-800">Success Alert</h3>
+                                    <div class="mt-2 text-sm text-green-700">
+                                        <p>Operation completed successfully!</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rounded-md bg-yellow-50 p-4">
+                            <div class="flex">
+                                <div class="flex-shrink-0">
+                                    <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                    </svg>
+                                </div>
+                                <div class="ml-3">
+                                    <h3 class="text-sm font-medium text-yellow-800">Warning Alert</h3>
+                                    <div class="mt-2 text-sm text-yellow-700">
+                                        <p>Please review your input before proceeding.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rounded-md bg-red-50 p-4">
+                            <div class="flex">
+                                <div class="flex-shrink-0">
+                                    <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                                    </svg>
+                                </div>
+                                <div class="ml-3">
+                                    <h3 class="text-sm font-medium text-red-800">Error Alert</h3>
+                                    <div class="mt-2 text-sm text-red-700">
+                                        <p>Something went wrong. Please try again.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Overlays Section -->
+        <section id="overlays" class="component-section mb-16">
+            <h2 class="text-3xl font-bold text-gray-900 mb-8">Overlay Components</h2>
+            <div class="space-y-8">
+                <!-- Dialog/Modal -->
+                <div class="bg-white rounded-lg border border-gray-200 p-8">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-6">Dialog/Modal</h3>
+                    <div class="bg-gray-50 p-6 rounded-lg border-2 border-dashed border-gray-300">
+                        <div class="text-center">
+                            <h3 class="text-lg font-medium text-gray-900 mb-2">Modal Example</h3>
+                            <p class="text-gray-600 mb-4">This is a representation of how a modal would appear. In the actual implementation, this would be an overlay.</p>
+                            <div class="flex justify-center space-x-3">
+                                <button class="bg-primary-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-primary-600">Confirm</button>
+                                <button class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-300">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Color Palette -->
+        <section class="component-section mb-16">
+            <h2 class="text-3xl font-bold text-gray-900 mb-8">Color Palette</h2>
+            <div class="bg-white rounded-lg border border-gray-200 p-8">
+                <div class="space-y-8">
+                    <!-- Primary Colors -->
+                    <div>
+                        <h3 class="text-xl font-semibold text-gray-900 mb-4">Primary Colors</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                            <div class="text-center">
+                                <div class="w-16 h-16 bg-primary-50 rounded-lg border mx-auto mb-2"></div>
+                                <p class="text-xs font-medium text-gray-700">50</p>
+                                <p class="text-xs text-gray-500">#F8F9FF</p>
+                            </div>
+                            <div class="text-center">
+                                <div class="w-16 h-16 bg-primary-100 rounded-lg border mx-auto mb-2"></div>
+                                <p class="text-xs font-medium text-gray-700">100</p>
+                                <p class="text-xs text-gray-500">#E4E7FF</p>
+                            </div>
+                            <div class="text-center">
+                                <div class="w-16 h-16 bg-primary-200 rounded-lg border mx-auto mb-2"></div>
+                                <p class="text-xs font-medium text-gray-700">200</p>
+                                <p class="text-xs text-gray-500">#C7CCFF</p>
+                            </div>
+                            <div class="text-center">
+                                <div class="w-16 h-16 bg-primary-300 rounded-lg border mx-auto mb-2"></div>
+                                <p class="text-xs font-medium text-gray-700">300</p>
+                                <p class="text-xs text-gray-500">#A4ABFF</p>
+                            </div>
+                            <div class="text-center">
+                                <div class="w-16 h-16 bg-primary-500 rounded-lg border mx-auto mb-2"></div>
+                                <p class="text-xs font-medium text-gray-700">500</p>
+                                <p class="text-xs text-gray-500">#6366F1</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Status Colors -->
+                    <div>
+                        <h3 class="text-xl font-semibold text-gray-900 mb-4">Status Colors</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div class="text-center">
+                                <div class="w-16 h-16 bg-success rounded-lg border mx-auto mb-2"></div>
+                                <p class="text-xs font-medium text-gray-700">Success</p>
+                                <p class="text-xs text-gray-500">#10B981</p>
+                            </div>
+                            <div class="text-center">
+                                <div class="w-16 h-16 bg-warning rounded-lg border mx-auto mb-2"></div>
+                                <p class="text-xs font-medium text-gray-700">Warning</p>
+                                <p class="text-xs text-gray-500">#F59E0B</p>
+                            </div>
+                            <div class="text-center">
+                                <div class="w-16 h-16 bg-error rounded-lg border mx-auto mb-2"></div>
+                                <p class="text-xs font-medium text-gray-700">Error</p>
+                                <p class="text-xs text-gray-500">#EF4444</p>
+                            </div>
+                            <div class="text-center">
+                                <div class="w-16 h-16 bg-info rounded-lg border mx-auto mb-2"></div>
+                                <p class="text-xs font-medium text-gray-700">Info</p>
+                                <p class="text-xs text-gray-500">#3B82F6</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Usage Examples -->
+        <section class="component-section mb-16">
+            <h2 class="text-3xl font-bold text-gray-900 mb-8">Usage Examples</h2>
+            <div class="bg-white rounded-lg border border-gray-200 p-8">
+                <h3 class="text-xl font-semibold text-gray-900 mb-4">Component Import Pattern</h3>
+                <div class="code-block">
+                    <pre><code>// Import components from the UI library
+import { 
+  Button, 
+  Card, 
+  Input, 
+  Badge 
+} from '@/components/ui'
+
+// Use in your components
+function ExampleComponent() {
+  return (
+    &lt;Card&gt;
+      &lt;CardHeader&gt;
+        &lt;CardTitle&gt;Example&lt;/CardTitle&gt;
+      &lt;/CardHeader&gt;
+      &lt;CardContent&gt;
+        &lt;Input placeholder="Enter text..." /&gt;
+        &lt;Button&gt;Submit&lt;/Button&gt;
+      &lt;/CardContent&gt;
+    &lt;/Card&gt;
+  )
+}</code></pre>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 mt-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="text-center text-gray-500">
+                <p>&copy; 2024 Snowball Design System. Built with Tailwind CSS and React.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Add active state to navigation
+        const navLinks = document.querySelectorAll('.nav-link');
+        const sections = document.querySelectorAll('.component-section');
+
+        window.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.clientHeight;
+                if (scrollY >= (sectionTop - 200)) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('text-primary-600');
+                if (link.getAttribute('href') === `#${current}`) {
+                    link.classList.add('text-primary-600');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

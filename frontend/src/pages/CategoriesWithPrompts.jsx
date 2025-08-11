@@ -102,53 +102,55 @@ const CategoriesWithPrompts = ({ categories, brandId }) => {
       console.log(`🔍 Fetching response for prompt: ${promptId}`);
       const response = await apiService.getPromptResponse(promptId);
       console.log(`✅ Response received for prompt ${promptId}:`, response.data);
+      console.log(`🔍 Response structure:`, {
+        hasData: !!response.data,
+        dataType: typeof response.data,
+        hasSuccess: response.data?.success,
+        hasResponseText: !!response.data?.responseText,
+        responseTextLength: response.data?.responseText?.length || 0,
+        fullResponseData: response.data
+      });
       
-      // Handle different response structures
+      // Handle the simplified response structure
       let responseContent = '';
-      if (response.data && typeof response.data === 'string') {
-        // Direct string response
-        responseContent = response.data;
-      } else if (response.data && response.data.response) {
-        // Object with response property
-        responseContent = typeof response.data.response === 'string' 
-          ? response.data.response 
-          : JSON.stringify(response.data.response, null, 2);
-      } else if (response.data && response.data.text) {
-        // Object with text property
-        responseContent = typeof response.data.text === 'string' 
-          ? response.data.text 
-          : JSON.stringify(response.data.text, null, 2);
-      } else if (response.data && response.data.content) {
-        // Object with content property
-        responseContent = typeof response.data.content === 'string' 
-          ? response.data.content 
-          : JSON.stringify(response.data.content, null, 2);
-      } else if (response.data && response.data.aiResponse) {
-        // Object with aiResponse property
-        responseContent = typeof response.data.aiResponse === 'string' 
-          ? response.data.aiResponse 
-          : JSON.stringify(response.data.aiResponse, null, 2);
-      } else if (response.data && typeof response.data === 'object') {
-        // Handle object with id, text, runAt structure
-        if (response.data.id && response.data.text) {
-          responseContent = response.data.text;
-        } else {
-          // Try to stringify the object if it's complex
-          responseContent = JSON.stringify(response.data, null, 2);
-        }
+      if (response.data && response.data.success && response.data.responseText) {
+        // Backend now returns clean structure with responseText
+        responseContent = response.data.responseText;
+        console.log(`✅ Using responseText: ${responseContent.substring(0, 100)}...`);
+      } else if (response.data && response.data.message) {
+        // No response available
+        responseContent = response.data.message;
+        console.log(`⚠️ Using message: ${responseContent}`);
       } else {
+        // Fallback for unexpected response format
         responseContent = 'No response content available';
+        console.log(`❌ No valid response structure found, using fallback`);
       }
+      
+      console.log(`🔍 Final responseContent:`, {
+        content: responseContent,
+        type: typeof responseContent,
+        length: responseContent.length
+      });
       
       // Ensure we always have a string
       if (typeof responseContent !== 'string') {
         responseContent = JSON.stringify(responseContent, null, 2);
       }
       
-      setPromptResponses(prev => ({
-        ...prev,
-        [promptId]: responseContent
-      }));
+      setPromptResponses(prev => {
+        const newState = {
+          ...prev,
+          [promptId]: responseContent
+        };
+        console.log(`🔍 Updating promptResponses state:`, {
+          promptId,
+          responseContent,
+          newState,
+          prevState: prev
+        });
+        return newState;
+      });
     } catch (error) {
       console.error(`❌ Error fetching response for prompt ${promptId}:`, error);
       setPromptResponses(prev => ({
@@ -259,6 +261,13 @@ const CategoriesWithPrompts = ({ categories, brandId }) => {
                         prompts.map((prompt) => {
                           const hasResponse = promptResponses[prompt._id];
                           const isLoading = loadingResponses[prompt._id];
+                          
+                          console.log(`🔍 Rendering prompt ${prompt._id}:`, {
+                            hasResponse,
+                            responseType: typeof hasResponse,
+                            responseLength: hasResponse?.length || 0,
+                            isLoading
+                          });
                           
                           return (
                             <Card key={prompt._id} className="border-0 bg-background">

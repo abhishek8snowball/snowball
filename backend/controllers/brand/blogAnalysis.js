@@ -2,6 +2,131 @@ const BlogExtractionService = require("../../utils/blogExtractionService");
 const BlogAnalysis = require("../../models/BlogAnalysis");
 const BlogScore = require("../../models/BlogScore");
 const { blogScorer } = require("./blogScorer");
+const axios = require("axios");
+
+// Add URL validation function
+const validateBlogUrls = async (blogUrls) => {
+  console.log(`🔍 Validating ${blogUrls.length} blog URLs before processing...`);
+  const validUrls = [];
+  
+  for (const url of blogUrls) {
+    try {
+      console.log(`🔍 Checking URL: ${url}`);
+      
+      // Use GET request instead of HEAD for better compatibility
+      const response = await axios.get(url, { 
+        timeout: 15000,
+        maxRedirects: 5,
+        validateStatus: function (status) {
+          // Accept 2xx status codes and redirects
+          return status >= 200 && status < 400;
+        },
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+      });
+      
+      // Check if the response contains actual content (not just a redirect page)
+      const contentLength = response.data ? response.data.length : 0;
+      const isRedirect = response.request && response.request.res && response.request.res.responseUrl !== url;
+      
+      if (response.status >= 200 && response.status < 400 && contentLength > 100 && !isRedirect) {
+        validUrls.push(url);
+        console.log(`✅ URL validated: ${url} (Status: ${response.status}, Content Length: ${contentLength})`);
+      } else {
+        console.log(`❌ URL validation failed: ${url} (Status: ${response.status}, Content Length: ${contentLength}, Redirect: ${isRedirect})`);
+      }
+    } catch (error) {
+      if (error.response) {
+        // Server responded with error status
+        console.log(`❌ URL validation failed: ${url} - HTTP ${error.response.status} (${error.response.statusText})`);
+      } else if (error.request) {
+        // Request was made but no response received
+        console.log(`❌ URL validation failed: ${url} - No response received (timeout/network error)`);
+      } else {
+        // Something else happened
+        console.log(`❌ URL validation failed: ${url} - ${error.message}`);
+      }
+    }
+  }
+  
+  console.log(`📊 URL validation complete: ${validUrls.length}/${blogUrls.length} URLs are valid`);
+  
+  if (validUrls.length === 0) {
+    console.log(`⚠️ WARNING: All ${blogUrls.length} extracted URLs failed validation!`);
+    console.log(`⚠️ This suggests the blog extraction service is generating invalid URLs.`);
+    console.log(`⚠️ Consider implementing real website crawling instead of AI-generated URLs.`);
+  }
+  
+  return validUrls;
+};
+
+// Fallback function to find real blog URLs
+const findRealBlogUrls = async (domain) => {
+  console.log(`🔍 Attempting to find real blog URLs for ${domain}...`);
+  const realUrls = [];
+  
+  try {
+    // Try to find sitemap
+    const sitemapUrl = `${domain}/sitemap.xml`;
+    try {
+      const sitemapResponse = await axios.get(sitemapUrl, { timeout: 10000 });
+      if (sitemapResponse.status === 200) {
+        console.log(`✅ Found sitemap at ${sitemapUrl}`);
+        // Extract blog URLs from sitemap (basic regex extraction)
+        const blogMatches = sitemapResponse.data.match(/<loc>(https?:\/\/[^<]+blog[^<]+)<\/loc>/gi);
+        if (blogMatches) {
+          blogMatches.forEach(match => {
+            const url = match.replace(/<loc>(.*)<\/loc>/i, '$1');
+            if (url.includes('blog') && !realUrls.includes(url)) {
+              realUrls.push(url);
+            }
+          });
+        }
+      }
+    } catch (sitemapError) {
+      console.log(`⚠️ No sitemap found at ${sitemapUrl}`);
+    }
+    
+    // Try common blog patterns
+    const commonBlogPatterns = [
+      `${domain}/blog`,
+      `${domain}/articles`,
+      `${domain}/news`,
+      `${domain}/insights`,
+      `${domain}/resources`
+    ];
+    
+    for (const pattern of commonBlogPatterns) {
+      try {
+        const response = await axios.get(pattern, { timeout: 10000 });
+        if (response.status === 200 && response.data.length > 100) {
+          console.log(`✅ Found blog section at ${pattern}`);
+          // Extract individual blog post URLs from the blog listing page
+          const blogPostMatches = response.data.match(/href=["']([^"']*blog[^"']*\/[^"']*)["']/gi);
+          if (blogPostMatches) {
+            blogPostMatches.forEach(match => {
+              const url = match.replace(/href=["']([^"']*)["']/i, '$1');
+              const fullUrl = url.startsWith('http') ? url : `${domain}${url.startsWith('/') ? '' : '/'}${url}`;
+              if (fullUrl.includes('blog') && !realUrls.includes(fullUrl)) {
+                realUrls.push(fullUrl);
+              }
+            });
+          }
+        }
+      } catch (patternError) {
+        // Pattern not found, continue to next
+      }
+    }
+    
+    console.log(`🔍 Found ${realUrls.length} potential real blog URLs`);
+    return realUrls.slice(0, 5); // Limit to 5
+    
+  } catch (error) {
+    console.log(`❌ Error finding real blog URLs: ${error.message}`);
+    return [];
+  }
+};
 
 exports.extractAndSaveBlogs = async (brand) => {
   try {
@@ -15,14 +140,47 @@ exports.extractAndSaveBlogs = async (brand) => {
       return { blogs: [] };
     }
 
-    console.log(`📊 Processing ${blogUrls.length} blogs with GEO scoring...`);
+    console.log(`📋 Extracted ${blogUrls.length} blog URLs from AI service:`);
+    blogUrls.forEach((url, index) => {
+      console.log(`  ${index + 1}. ${url}`);
+    });
+
+    // Validate URLs before processing
+    let validBlogUrls = await validateBlogUrls(blogUrls);
     
-    // Process each blog to get recommendations and GEO scores
+    if (validBlogUrls.length === 0) {
+      console.log('⚠️ No valid blog URLs found after validation, trying fallback method...');
+      
+      // Try to find real blog URLs as fallback
+      const fallbackUrls = await findRealBlogUrls(brand.domain);
+      if (fallbackUrls.length > 0) {
+        console.log(`✅ Found ${fallbackUrls.length} real blog URLs using fallback method`);
+        const validFallbackUrls = await validateBlogUrls(fallbackUrls);
+        if (validFallbackUrls.length > 0) {
+          console.log(`✅ Using ${validFallbackUrls.length} validated fallback URLs`);
+          validBlogUrls = validFallbackUrls;
+        } else {
+          console.log('⚠️ Even fallback URLs failed validation, returning empty result');
+          return { blogs: [] };
+        }
+      } else {
+        console.log('⚠️ No fallback URLs found, returning empty result');
+        return { blogs: [] };
+      }
+    }
+
+    console.log(`📊 Processing ${validBlogUrls.length} valid blogs with GEO scoring...`);
+    console.log(`📋 Valid URLs to process:`);
+    validBlogUrls.forEach((url, index) => {
+      console.log(`  ${index + 1}. ${url}`);
+    });
+    
+    // Process each valid blog to get recommendations and GEO scores
     const blogsWithAnalysis = [];
     
-    for (let i = 0; i < blogUrls.length; i++) {
-      const url = blogUrls[i];
-      console.log(`🔍 Processing blog ${i + 1}/${blogUrls.length}: ${url}`);
+    for (let i = 0; i < validBlogUrls.length; i++) {
+      const url = validBlogUrls[i];
+      console.log(`🔍 Processing blog ${i + 1}/${validBlogUrls.length}: ${url}`);
       
       try {
         // Get GEO score and recommendations using OpenAI API
@@ -61,7 +219,7 @@ exports.extractAndSaveBlogs = async (brand) => {
         console.log(`✅ Added blog ${i + 1} with GEO score: ${geoScoreResult.geoScore}/10 (${geoScoreResult.geoReadiness})`);
         
         // Add a small delay to avoid rate limiting
-        if (i < blogUrls.length - 1) {
+        if (i < validBlogUrls.length - 1) {
           await new Promise(resolve => setTimeout(resolve, 2000));
         }
         

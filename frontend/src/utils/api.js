@@ -98,6 +98,22 @@ export const apiService = {
   getCategoryPrompts: (categoryId) => api.get(`/api/v1/brand/categories/${categoryId}/prompts`),
   getPromptResponse: (promptId) => api.get(`/api/v1/brand/prompts/${promptId}/response`),
   
+  // Content Calendar
+  generateContentCalendar: (data) => api.post('/api/v1/content-calendar/generate', data),
+  approveContentCalendar: (data) => api.post('/api/v1/content-calendar/approve', data),
+  getContentCalendar: (params) => api.get('/api/v1/content-calendar', { params }),
+  updateCalendarEntry: (id, data) => api.put(`/api/v1/content-calendar/${id}`, data),
+  deleteCalendarEntry: (id) => api.delete(`/api/v1/content-calendar/${id}`),
+  
+  // CMS Credentials
+  saveCMSCredentials: (data) => api.post('/api/v1/cms-credentials', data),
+  getCMSCredentials: (params) => api.get('/api/v1/cms-credentials', { params }),
+  testCMSConnection: (data) => api.post('/api/v1/cms-credentials/test', data),
+  deleteCMSCredentials: (id) => api.delete(`/api/v1/cms-credentials/${id}`),
+  deactivateCMSCredentials: (id) => api.patch(`/api/v1/cms-credentials/${id}/deactivate`),
+  
+
+  
   // Removed unused debug endpoint
   
   // Blog Analysis

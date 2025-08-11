@@ -15,6 +15,11 @@ const cors = require('cors');
 const app = express();
 const mainRouter = require("./routes/user");
 const brandRouter = require("./routes/brand");
+const contentCalendarRouter = require("./routes/contentCalendar");
+const cmsCredentialsRouter = require("./routes/cmsCredentials");
+
+// Initialize auto-publisher
+require('./utils/autoPublisher');
 
 app.use(express.json());
 
@@ -55,6 +60,8 @@ app.get('/api/v1/health', (req, res) => {
 
 app.use("/api/v1", mainRouter);
 app.use("/api/v1/brand", brandRouter);
+app.use("/api/v1/content-calendar", contentCalendarRouter);
+app.use("/api/v1/cms-credentials", cmsCredentialsRouter);
 
 // Global error handler
 app.use((err, req, res, next) => {

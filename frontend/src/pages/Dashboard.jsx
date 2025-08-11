@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Input } from '../components/ui/input';
 import DomainAnalysis from './DomainAnalysis';
 import BlogAnalysis from './BlogAnalysis';
+import ContentCalendarView from './ContentCalendarView';
 import { apiService } from '../utils/api';
 import { getUserName } from '../utils/auth';
 import { 
@@ -15,7 +16,8 @@ import {
   LogOut, 
   Link as LinkIcon,
   Activity,
-  ArrowLeft
+  ArrowLeft,
+  Calendar
 } from 'lucide-react';
 
 const Dashboard = () => {
@@ -42,8 +44,8 @@ const Dashboard = () => {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-semibold text-[#4a4a6a]"></h2>
-              <p className="text-[#4a4a6a]"></p>
+              <h2 className="text-2xl font-semibold text-[#4a4a6a]">Domain Analysis</h2>
+              <p className="text-[#4a4a6a]">Comprehensive brand insights and competitive intelligence</p>
             </div>
             <Button variant="outline" onClick={() => setActiveTool(null)} className="inline-flex items-center border-[#b0b0d8] text-[#4a4a6a] hover:bg-white hover:border-[#6658f4]">
               <ArrowLeft className="w-4 h-4 mr-2" /> Back
@@ -66,6 +68,22 @@ const Dashboard = () => {
             </Button>
           </div>
           <BlogAnalysis inline onClose={() => setActiveTool(null)} />
+        </div>
+      );
+    }
+    if (activeTool === 'content-calendar') {
+      return (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-semibold text-[#4a4a6a]">Content Calendar</h2>
+              <p className="text-[#4a4a6a]">AI-powered content planning and auto-publishing</p>
+            </div>
+            <Button variant="outline" onClick={() => setActiveTool(null)} className="inline-flex items-center border-[#b0b0d8] text-[#4a4a6a] hover:bg-white hover:border-[#6658f4]">
+              <ArrowLeft className="w-4 h-4 mr-2" /> Back
+            </Button>
+          </div>
+          <ContentCalendarView inline onClose={() => setActiveTool(null)} />
         </div>
       );
     }
@@ -153,13 +171,13 @@ const Dashboard = () => {
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-h-0">
         {/* Header */}
-        <header className="bg-white border-b border-[#b0b0d8] px-8 py-6 flex-shrink-0">
+        <header className="bg-white border-b border-[#b0b0d8] px-8 py-3 flex-shrink-0">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-2xl font-semibold text-[#4a4a6a]">
+              <h1 className="text-xl font-semibold text-[#000000]">
                 Welcome back, {userName}!
               </h1>
-              <p className="text-[#4a4a6a] mt-1">
+              <p className="text-[#000000] mt-1">
                 Ready to analyze your next project?
               </p>
             </div>
@@ -185,7 +203,7 @@ const Dashboard = () => {
                             <Globe className="w-6 h-6 text-white" />
                           </div>
                           <div>
-                            <h3 className="text-lg font-semibold text-[#4a4a6a]">
+                            <h3 className="text-lg font-semibold text-[#000000]">
                               Domain Analysis
                             </h3>
                             <p className="text-sm text-[#4a4a6a]">
@@ -210,7 +228,7 @@ const Dashboard = () => {
                             <FileText className="w-6 h-6 text-white" />
                           </div>
                           <div>
-                            <h3 className="text-lg font-semibold text-[#4a4a6a]">
+                            <h3 className="text-lg font-semibold text-[#000000]">
                               Blog Analysis
                             </h3>
                             <p className="text-sm text-[#4a4a6a]">
@@ -220,6 +238,31 @@ const Dashboard = () => {
                         </div>
                         <p className="text-sm text-[#4a4a6a]">
                           Analyze blog content using our GEO framework for content optimization and scoring.
+                        </p>
+                      </CardContent>
+                    </Card>
+
+                    {/* Content Calendar Card */}
+                    <Card 
+                      className="cursor-pointer card-hover border border-[#b0b0d8] bg-white"
+                      onClick={() => setActiveTool('content-calendar')}
+                    >
+                      <CardContent className="p-6">
+                        <div className="flex items-center space-x-4 mb-4">
+                          <div className="w-12 h-12 bg-[#7c77ff] rounded-lg flex items-center justify-center">
+                            <Calendar className="w-6 h-6 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-semibold text-[#000000]">
+                              Content Calendar
+                            </h3>
+                            <p className="text-sm text-[#4a4a6a]">
+                              AI-powered content planning
+                            </p>
+                          </div>
+                        </div>
+                        <p className="text-sm text-[#4a4a6a]">
+                          Generate 30-day content plans and auto-publish to your CMS platforms.
                         </p>
                       </CardContent>
                     </Card>

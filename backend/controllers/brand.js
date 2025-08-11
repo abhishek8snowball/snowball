@@ -197,18 +197,20 @@ exports.getPromptResponse = async (req, res) => {
       console.log(`📝 Response text preview: "${response.responseText.substring(0, 100)}..."`);
     }
     
-    res.json({
-      prompt: {
-        id: prompt._id,
-        text: prompt.promptText,
-        categoryId: prompt.categoryId
-      },
-      response: response ? {
-        id: response._id,
-        text: response.responseText,
+    // Return just the response text if available, otherwise return null
+    if (response) {
+      res.json({
+        success: true,
+        responseText: response.responseText,
         runAt: response.runAt
-      } : null
-    });
+      });
+    } else {
+      res.json({
+        success: false,
+        message: "No AI response found for this prompt",
+        responseText: null
+      });
+    }
   } catch (error) {
     console.error("❌ Error fetching prompt response:", error);
     res.status(500).json({ msg: "Failed to fetch prompt response", error: error.message });

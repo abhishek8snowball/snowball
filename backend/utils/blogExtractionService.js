@@ -10,14 +10,14 @@ class BlogExtractionService {
 
   async extractTopBlogs(domain) {
     try {
-      console.log(`🔍 Extracting top 10 blogs from: ${domain}`);
+      console.log(`🔍 Extracting top 5 blogs from: ${domain}`);
 
       if (!this.apiKey) {
         console.error('❌ Perplexity API key not found');
         return [];
       }
 
-      const prompt = `Extract exactly 10 most important blog posts or articles from ${domain}. 
+      const prompt = `Extract exactly 5 most important blog posts or articles from ${domain}. 
       
 Focus on:
 - High-quality, informative content
@@ -27,9 +27,9 @@ Focus on:
 - Most popular and trending blog posts
 
 Return ONLY a JSON array of URLs in this exact format:
-["https://domain.com/blog1", "https://domain.com/blog2", "https://domain.com/blog3", "https://domain.com/blog4", "https://domain.com/blog5", "https://domain.com/blog6", "https://domain.com/blog7", "https://domain.com/blog8", "https://domain.com/blog9", "https://domain.com/blog10"]
+["https://domain.com/blog1", "https://domain.com/blog2", "https://domain.com/blog3", "https://domain.com/blog4", "https://domain.com/blog5"]
 
-Make sure to return exactly 10 URLs. Do not include any explanations or additional text, just the JSON array.`;
+Make sure to return exactly 5 URLs. Do not include any explanations or additional text, just the JSON array.`;
 
       const requestBody = {
         model: 'sonar-pro',
@@ -83,7 +83,7 @@ Make sure to return exactly 10 URLs. Do not include any explanations or addition
         const urlRegex = /https?:\/\/[^\s"']+/g;
         const matches = content.match(urlRegex);
         if (matches) {
-          blogUrls = matches.slice(0, 10); // Limit to 10
+          blogUrls = matches.slice(0, 5); // Limit to 5
         }
       }
 
@@ -92,7 +92,7 @@ Make sure to return exactly 10 URLs. Do not include any explanations or addition
         .filter(url => url && typeof url === 'string')
         .map(url => url.trim())
         .filter(url => url.startsWith('http'))
-        .slice(0, 10); // Ensure max 10
+        .slice(0, 5); // Ensure max 5
 
       console.log(`✅ Extracted ${blogUrls.length} blog URLs:`, blogUrls);
       return blogUrls;

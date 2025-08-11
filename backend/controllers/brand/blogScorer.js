@@ -18,11 +18,11 @@ You are an SEO and AI content evaluation expert. Analyze the following blog for 
 
 Please evaluate the blog against the following 5 GEO factors. For each factor:
 - Give a score from 0 to 10 (10 being excellent, 0 being not present)
-- Multiply by the weight percentage
+- Multiply by the weight percentage to get the weighted score
 - Provide a brief explanation for the score with specific examples from the content
 - Note any limitations in your evaluation method
 
-At the end, calculate the total weighted score out of 10 and summarize the blog's GEO-readiness.
+IMPORTANT: You MUST calculate the weighted score for each factor and provide the total at the end.
 
 ---
 
@@ -115,7 +115,7 @@ At the end, calculate the total weighted score out of 10 and summarize the blog'
 
 ---
 
-## *Output Format:*
+## *REQUIRED Output Format:*
 
 ### *GEO Evaluation Results*
 
@@ -126,7 +126,8 @@ At the end, calculate the total weighted score out of 10 and summarize the blog'
 | Semantic Clarity & Topic Authority | X/10 | 20% | X.XX | Brief explanation with examples |
 | Content Freshness & Conversational Optimization | X/10 | 15% | X.XX | Brief explanation with examples |
 | Citation Worthiness & Multimedia Integration | X/10 | 10% | X.XX | Brief explanation with examples |
-| *TOTAL GEO SCORE* | | *100%* | *X.XX/10* | |
+
+**TOTAL GEO SCORE: [Sum of all weighted scores] / 10**
 
 ### *GEO Readiness Assessment:*
 - *8.5-10.0: **Excellent* - High likelihood of AI search visibility
@@ -148,7 +149,9 @@ Provide 5 specific, actionable recommendations for improving this blog's GEO per
 5. **Marketing Opportunities**: [Ways to increase visibility and reach]
 
 ### *Evaluation Limitations:*
-[Note any factors you couldn't fully verify and explain why]`;
+[Note any technical limitations or assumptions made during evaluation]
+
+**CRITICAL: Ensure you calculate the weighted score for each factor and provide the total at the end.**`;
   }
 
   async scrapeBlogContent(url) {
@@ -256,6 +259,9 @@ Provide 5 specific, actionable recommendations for improving this blog's GEO per
       // Step 4: Parse the AI response to extract scores and recommendations
       const parsedResults = this.parseAIResponse(aiResponse);
       
+      console.log(`📊 Parsed results - Total Score: ${parsedResults.totalScore}, Readiness: ${parsedResults.readiness}`);
+      console.log(`📊 Factor details count: ${parsedResults.factorDetails.length}`);
+      
       // Step 5: Combine results
       const finalResult = {
         blogUrl,
@@ -268,6 +274,7 @@ Provide 5 specific, actionable recommendations for improving this blog's GEO per
         geoScore: parsedResults.totalScore,
         geoReadiness: parsedResults.readiness,
         factorScores: parsedResults.factorScores,
+        factorDetails: parsedResults.factorDetails, // Add the detailed factor information
         recommendations: parsedResults.recommendations,
         limitations: parsedResults.limitations,
         summary: parsedResults.summary,
@@ -275,7 +282,8 @@ Provide 5 specific, actionable recommendations for improving this blog's GEO per
         scoredAt: new Date()
       };
       
-      console.log(`✅ GEO scoring completed. Score: ${finalResult.geoScore}/10`);
+      console.log(`✅ GEO scoring completed. Final Score: ${finalResult.geoScore}/10`);
+      console.log(`✅ Readiness Level: ${finalResult.geoReadiness}`);
       return finalResult;
       
     } catch (error) {
@@ -287,6 +295,7 @@ Provide 5 specific, actionable recommendations for improving this blog's GEO per
   parseAIResponse(aiResponse) {
     try {
       console.log('🔍 Parsing AI response for scores and recommendations...');
+      console.log('📝 Raw AI response preview:', aiResponse.substring(0, 500) + '...');
       
       // Initialize default values
       const result = {
@@ -299,54 +308,144 @@ Provide 5 specific, actionable recommendations for improving this blog's GEO per
         summary: ''
       };
       
-      // Extract total score
-      const totalScoreMatch = aiResponse.match(/\*TOTAL GEO SCORE\*.*?\*(\d+\.?\d*)\/10\*/);
-      if (totalScoreMatch) {
-        result.totalScore = parseFloat(totalScoreMatch[1]);
-      }
-      
       // Extract detailed factor information from the table
-      const tableMatch = aiResponse.match(/\*GEO Evaluation Results\*([\s\S]*?)(?=\*GEO Readiness Assessment:\*|$)/);
+      console.log('🔍 Looking for table with pattern: ###\\s*\\*?GEO Evaluation Results\\*?');
+      
+      const tableMatch = aiResponse.match(/###\s*\*?GEO Evaluation Results\*?\s*\n([\s\S]*?)(?=\*\*TOTAL GEO SCORE|###|$)/);
       if (tableMatch) {
         const tableContent = tableMatch[1];
-        const rows = tableContent.split('\n').filter(row => row.includes('|'));
+        console.log('📊 Table content found:', tableContent);
         
-        rows.forEach(row => {
-          const columns = row.split('|').map(col => col.trim()).filter(col => col.length > 0);
-          if (columns.length >= 5 && !columns[0].includes('Factor') && !columns[0].includes('---')) {
-            const factor = columns[0];
-            const scoreMatch = columns[1].match(/(\d+\.?\d*)\/10/);
-            const weightMatch = columns[2].match(/(\d+)%/);
-            const weightedScoreMatch = columns[3].match(/(\d+\.?\d*)/);
-            const comments = columns[4];
+        // Parse table rows
+        const rows = tableContent.split('\n').filter(row => row.trim() && row.includes('|'));
+        console.log(`📊 Found ${rows.length} table rows`);
+        
+        for (const row of rows) {
+          const columns = row.split('|').map(col => col.trim()).filter(col => col);
+          console.log('🔍 Processing row:', columns);
+          
+          // Skip header and separator rows
+          if (columns.length < 4 || columns[0].includes('Factor') || columns[0].includes('---')) {
+            continue;
+          }
+          
+          // Extract factor information
+          const factor = columns[0];
+          const scoreMatch = columns[1].match(/(\d+)\/10/);
+          const weightMatch = columns[2].match(/(\d+)%/);
+          const weightedMatch = columns[3].match(/(\d+\.?\d*)/);
+          
+          if (scoreMatch && weightMatch && weightedMatch) {
+            const score = parseInt(scoreMatch[1]);
+            const weight = parseInt(weightMatch[1]);
+            const weightedScore = parseFloat(weightedMatch[1]);
+            const comments = columns[4] || '';
             
-            if (scoreMatch && weightMatch && weightedScoreMatch) {
-              const score = parseFloat(scoreMatch[1]);
-              const weight = parseInt(weightMatch[1]);
-              const weightedScore = parseFloat(weightedScoreMatch[1]);
+            console.log(`🔍 Factor: ${factor}, Score: ${score}, Weight: ${weight}%, Weighted: ${weightedScore}`);
+            
+            result.factorDetails.push({
+              factor,
+              score,
+              weight,
+              weightedScore,
+              comments
+            });
+          }
+        }
+      } else {
+        console.log('⚠️ No table found with primary pattern, trying alternative parsing...');
+        console.log('🔍 Looking for alternative patterns...');
+        
+        // Try alternative table format detection
+        const altTableMatch = aiResponse.match(/(?:GEO Evaluation Results|GEO Blog Scoring Framework).*?\n([\s\S]*?)(?=TOTAL GEO SCORE|GEO Readiness Assessment|$)/i);
+        if (altTableMatch) {
+          console.log('📊 Alternative table format found, attempting to parse...');
+          const tableContent = altTableMatch[1];
+          
+          // Look for any lines with pipe separators that might be table rows
+          const potentialRows = tableContent.split('\n').filter(row => 
+            row.includes('|') && 
+            row.includes('/10') && 
+            row.includes('%') &&
+            !row.includes('Factor') &&
+            !row.includes('---')
+          );
+          
+          console.log(`📊 Found ${potentialRows.length} potential table rows in alternative format`);
+          
+          for (const row of potentialRows) {
+            const columns = row.split('|').map(col => col.trim()).filter(col => col);
+            if (columns.length >= 4) {
+              const factor = columns[0];
+              const scoreMatch = columns[1].match(/(\d+)\/10/);
+              const weightMatch = columns[2].match(/(\d+)%/);
+              const weightedMatch = columns[3].match(/(\d+\.?\d*)/);
               
-              result.factorScores[factor] = { 
-                score, 
-                weight: `${weight}%`,
-                weightedScore 
-              };
-              
-              result.factorDetails.push({
-                factor,
-                score,
-                weight,
-                weightedScore,
-                comments
-              });
+              if (scoreMatch && weightMatch && weightedMatch) {
+                const score = parseInt(scoreMatch[1]);
+                const weight = parseInt(weightMatch[1]);
+                const weightedScore = parseFloat(weightedMatch[1]);
+                const comments = columns[4] || '';
+                
+                console.log(`🔍 Alternative parsing - Factor: ${factor}, Score: ${score}, Weight: ${weight}%, Weighted: ${weightedScore}`);
+                
+                result.factorDetails.push({
+                  factor,
+                  score,
+                  weight,
+                  weightedScore,
+                  comments
+                });
+              }
             }
           }
-        });
+        } else {
+          console.log('⚠️ No alternative table format found either');
+        }
       }
       
-      // Fallback: Extract factor scores from the old format if table parsing failed
-      if (result.factorDetails.length === 0) {
+      // Calculate total score from factor scores if we have them
+      if (result.factorDetails.length > 0) {
+        // First, try to extract the AI's provided total score (multiple formats)
+        let aiTotalScoreMatch = aiResponse.match(/\*\*TOTAL GEO SCORE:\s*(\d+\.?\d*)\s*\/\s*10\*\*/i);
+        
+        if (!aiTotalScoreMatch) {
+          // Try alternative format
+          aiTotalScoreMatch = aiResponse.match(/TOTAL GEO SCORE:\s*(\d+\.?\d*)\s*\/\s*10/i);
+        }
+        
+        if (!aiTotalScoreMatch) {
+          // Try another alternative format
+          aiTotalScoreMatch = aiResponse.match(/\*\*TOTAL GEO SCORE\*\*:\s*(\d+\.?\d*)\s*\/\s*10/i);
+        }
+        
+        if (aiTotalScoreMatch) {
+          result.totalScore = parseFloat(aiTotalScoreMatch[1]);
+          console.log(`📊 Using AI's provided total score: ${result.totalScore}/10`);
+          
+          // Also calculate from factors to compare
+          const calculatedTotal = result.factorDetails.reduce((sum, factor) => {
+            return sum + factor.weightedScore;
+          }, 0);
+          console.log(`📊 For comparison - Calculated from factors: ${calculatedTotal.toFixed(2)}/10`);
+          
+          if (Math.abs(result.totalScore - calculatedTotal) > 0.1) {
+            console.log(`⚠️ WARNING: AI score (${result.totalScore}) differs significantly from calculated score (${calculatedTotal.toFixed(2)})`);
+          }
+        } else {
+          // If AI didn't provide total, calculate from factor scores
+          result.totalScore = result.factorDetails.reduce((sum, factor) => {
+            return sum + factor.weightedScore;
+          }, 0);
+          console.log(`📊 AI didn't provide total score, calculated from factors: ${result.totalScore.toFixed(2)}/10`);
+        }
+      } else {
+        console.log('⚠️ No factor details found, trying fallback parsing...');
+        
+        // Fallback: Extract factor scores from the old format if table parsing failed
         const factorMatches = aiResponse.match(/\|([^|]+)\|(\d+\.?\d*)\/10\|(\d+%)/g);
         if (factorMatches) {
+          console.log('📊 Found factor matches with old format:', factorMatches);
           factorMatches.forEach(match => {
             const parts = match.split('|');
             if (parts.length >= 4) {
@@ -356,6 +455,45 @@ Provide 5 specific, actionable recommendations for improving this blog's GEO per
               result.factorScores[factorName] = { score, weight };
             }
           });
+        }
+        
+        // Try to extract total score from the old format
+        const totalScoreMatch = aiResponse.match(/\*TOTAL GEO SCORE\*.*?\*(\d+\.?\d*)\/10\*/);
+        if (totalScoreMatch) {
+          result.totalScore = parseFloat(totalScoreMatch[1]);
+          console.log(`📊 Found total score in old format: ${result.totalScore}/10`);
+        }
+      }
+      
+      // Final fallback: If we still don't have a total score, try to calculate it manually
+      if (result.totalScore === 0 && result.factorDetails.length > 0) {
+        console.log('⚠️ Total score is 0, attempting manual calculation from factor scores...');
+        
+        // Define the expected weights for each factor
+        const expectedWeights = {
+          'Content Structure & Answer Format': 30,
+          'Schema Markup & Technical Foundation': 25,
+          'Semantic Clarity & Topic Authority': 20,
+          'Content Freshness & Conversational Optimization': 15,
+          'Citation Worthiness & Multimedia Integration': 10
+        };
+        
+        let manualTotal = 0;
+        let calculatedFactors = 0;
+        
+        result.factorDetails.forEach(factor => {
+          if (expectedWeights[factor.factor]) {
+            const expectedWeight = expectedWeights[factor.factor];
+            const calculatedWeightedScore = (factor.score * expectedWeight) / 100;
+            manualTotal += calculatedWeightedScore;
+            calculatedFactors++;
+            console.log(`🔍 Manual calc: ${factor.factor} - Score: ${factor.score}/10, Weight: ${expectedWeight}%, Weighted: ${calculatedWeightedScore.toFixed(2)}`);
+          }
+        });
+        
+        if (calculatedFactors > 0) {
+          result.totalScore = manualTotal;
+          console.log(`📊 Manual calculation successful: ${result.totalScore.toFixed(2)}/10 from ${calculatedFactors} factors`);
         }
       }
       
@@ -399,6 +537,8 @@ Provide 5 specific, actionable recommendations for improving this blog's GEO per
       }
       
       console.log('✅ AI response parsed successfully');
+      console.log(`📊 Total calculated score: ${result.totalScore.toFixed(2)}/10`);
+      console.log(`📊 Readiness level: ${result.readiness}`);
       console.log('📊 Factor details:', result.factorDetails);
       return result;
       
