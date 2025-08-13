@@ -88,7 +88,7 @@ Long-tail keywords for ${brand.domain} in ${catDoc.categoryName}: ${keywords.joi
 
 Popular competitors include: ${competitorList.join(', ')}.
 
-Generate 5 natural, conversational questions that users typically ask ChatGPT about these keywords. These questions should be framed so that responses would naturally mention ${brand.brandName} but it should depict natural ai presence of the brand not like we are pushing it alongside competitors.
+Generate 5 natural, conversational questions that users typically ask ChatGPT about these keywords. These questions should be framed so that responses would naturally mention ${brand.brandName} but it should not mention explicitly or showing biasness towrads ${brand.brandName} , also same goes for competitors.
 
 Guidelines:
 - Use the provided keywords as inspiration for question topics
@@ -147,4 +147,3 @@ Format: Output only a JSON array of 5 strings.`;
   console.log(`🎉 Prompt generation complete. Created ${prompts.length} prompts total.`);
   return prompts;
 };
-

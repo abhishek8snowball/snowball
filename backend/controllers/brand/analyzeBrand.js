@@ -58,7 +58,7 @@ exports.analyzeBrand = async (req, res) => {
 
     // 5. Run prompts and save responses
     console.log("🤖 Step 5: Running prompts...");
-    const aiResponses = await runPromptsAndSaveResponses(openai, categoryPrompts, brand);
+    const aiResponses = await runPromptsAndSaveResponses(openai, categoryPrompts);
     console.log("✅ AI responses generated:", aiResponses.length, "responses");
 
     // 6. Extract competitors
