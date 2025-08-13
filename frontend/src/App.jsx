@@ -1,6 +1,7 @@
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
 import { Dashboard, HomeLayout, Landing, Login, Logout, Register, BlogScoring } from "./pages";
 import History from "./pages/History";
+import BlogEditor from "./pages/BlogEditor";
 import { ToastContainer, toast } from 'react-toastify';
 import ErrorBoundary from './components/ErrorBoundary';
 
@@ -36,6 +37,10 @@ const router = createBrowserRouter([
       {
         path: "brand/:brandId/blog-scoring",
         element: <BlogScoring />,
+      },
+      {
+        path: "editor/:postId",
+        element: <BlogEditor />,
       }
     ],
   },

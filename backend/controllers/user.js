@@ -7,33 +7,28 @@ const { Configuration, OpenAIApi } = require("openai");
 const OpenAI = require("openai");
 const authMiddleware = require('../middleware/auth');
 
-
-const AnalysisSchema = new mongoose.Schema({
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  url: String,
-  tags: Object,
-  suggestion: String, // <-- add this line
-  createdAt: { type: Date, default: Date.now }
-});
-const Analysis = mongoose.model('Analysis', AnalysisSchema);
+// Removed old Analysis model definition - now using the new Analysis model from models/Analysis.js
 
 
 const login = async (req, res) => {
+  console.log('🔐 Login attempt:', { body: req.body, headers: req.headers });
+  
   const { email, password } = req.body;
 
   if (!email || !password) {
+    console.log('❌ Missing email or password:', { email: !!email, password: !!password });
     return res.status(400).json({
       msg: "Bad request. Please add email and password in the request body",
     });
   }
 
+  console.log('🔍 Looking for user with email:', email);
   let foundUser = await User.findOne({ email: req.body.email });
+  
   if (foundUser) {
+    console.log('✅ User found:', foundUser.name);
     const isMatch = await foundUser.comparePassword(password);
+    console.log('🔑 Password match:', isMatch);
 
     if (isMatch) {
       const token = jwt.sign(
@@ -43,13 +38,15 @@ const login = async (req, res) => {
           expiresIn: "30d",
         }
       );
-
+      console.log('🎉 Login successful, token generated');
       return res.status(200).json({ msg: "user logged in", token });
     } else {
+      console.log('❌ Password mismatch');
       return res.status(400).json({ msg: "Bad password" });
     }
   } else {
-    return res.status(400).json({ msg: "Bad credentails" });
+    console.log('❌ User not found with email:', email);
+    return res.status(400).json({ msg: "Bad credentials" });
   }
 };
 

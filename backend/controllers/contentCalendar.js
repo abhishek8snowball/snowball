@@ -21,7 +21,7 @@ class ContentCalendarController {
       const contentPlan = await this.generateContentPlan(companyName, userId, req);
       
       // Format dates for the next 30 days
-      const formattedPlan = this.formatContentPlan(contentPlan, companyName);
+      const formattedPlan = await this.formatContentPlan(contentPlan, companyName, userId);
 
       res.json({
         success: true,
@@ -168,23 +168,7 @@ class ContentCalendarController {
   async generateContentPlan(companyName, userId, req) {
     const startTime = Date.now();
     
-    const prompt = `Generate a 30-day content marketing plan for ${companyName}. 
-    
-    For each day, provide:
-    - A compelling blog post title
-    - A detailed description (150-200 words)
-    - 3-5 relevant SEO keywords
-    - Target audience description
-    
-    The content should be diverse and cover:
-    - Industry insights and trends
-    - How-to guides and tutorials
-    - Company news and updates
-    - Customer success stories
-    - Educational content
-    - Thought leadership pieces
-    
-    Make the content engaging, SEO-friendly, and valuable for the target audience.
+    const prompt = `can you give 30 days content calender for ${companyName}  
     
     Return the response as a JSON array with 30 objects, each containing:
     {
@@ -192,7 +176,7 @@ class ContentCalendarController {
       "description": "Detailed description",
       "keywords": "keyword1, keyword2, keyword3",
       "targetAudience": "Target audience description"
-    }`;
+    };}`;
 
     // Prepare request payload for logging
     const requestPayload = {
@@ -315,9 +299,23 @@ class ContentCalendarController {
     }));
   }
 
-  formatContentPlan(contentPlan, companyName) {
+  async formatContentPlan(contentPlan, companyName, userId) {
     const today = new Date();
     const formattedPlan = [];
+
+    // Get user's CMS platform preference from credentials
+    let userCmsPlatform = 'shopify'; // Default to Shopify
+    try {
+      const userCredentials = await CMSCredentials.findOne({ 
+        userId, 
+        isActive: true 
+      });
+      if (userCredentials) {
+        userCmsPlatform = userCredentials.platform;
+      }
+    } catch (error) {
+      console.log('Could not determine user CMS platform, defaulting to Shopify');
+    }
 
     for (let i = 0; i < 30; i++) {
       const date = new Date(today);
@@ -332,11 +330,221 @@ class ContentCalendarController {
         keywords: content.keywords,
         targetAudience: content.targetAudience,
         status: 'draft',
-        cmsPlatform: 'wordpress'
+        cmsPlatform: userCmsPlatform
       });
     }
 
     return formattedPlan;
+  }
+
+  // Get specific calendar entry
+  async getEntry(req, res) {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id;
+
+      const entry = await ContentCalendar.findOne({ _id: id, userId });
+      
+      if (!entry) {
+        return res.status(404).json({ error: 'Entry not found' });
+      }
+
+      res.json({
+        success: true,
+        data: entry
+      });
+    } catch (error) {
+      console.error('Error getting entry:', error);
+      res.status(500).json({ error: 'Failed to get entry' });
+    }
+  }
+
+  // Create new calendar entry
+  async createEntry(req, res) {
+    try {
+      const userId = req.user.id;
+      const entryData = req.body;
+
+      const newEntry = new ContentCalendar({
+        ...entryData,
+        userId,
+        date: entryData.date ? new Date(entryData.date) : new Date(),
+        status: entryData.status || 'draft'
+      });
+
+      const savedEntry = await newEntry.save();
+
+      res.json({
+        success: true,
+        data: savedEntry,
+        message: 'Entry created successfully'
+      });
+    } catch (error) {
+      console.error('Error creating entry:', error);
+      res.status(500).json({ error: 'Failed to create entry' });
+    }
+  }
+
+  // Generate content outline using OpenAI
+  async generateOutline(req, res) {
+    try {
+      const { id } = req.params;
+      const { title, description, keywords, targetAudience } = req.body;
+      const userId = req.user.id;
+
+      console.log('generateOutline called with:', { id, title, description, keywords, targetAudience, userId });
+
+      if (!title) {
+        return res.status(400).json({ error: 'Title is required to generate outline' });
+      }
+
+      // Create OpenAI prompt for outline generation
+      const prompt = `Generate a detailed content outline for a blog post titled "${title}".
+
+Description: ${description || 'No description provided'}
+
+Keywords: ${keywords || 'No keywords provided'}
+
+Target Audience: ${targetAudience || 'General audience'}
+
+Please create a comprehensive outline with:
+1. Introduction section
+2. Main content sections (3-5 sections with subsections)
+3. Conclusion section
+4. Key takeaways
+5. Call-to-action suggestions
+
+Format the response as HTML with proper heading tags (h2, h3) and bullet points.`;
+
+      console.log('OpenAI prompt:', prompt);
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: [
+          {
+            role: "system",
+            content: "You are a professional content strategist and copywriter. Create detailed, actionable content outlines that help writers structure their blog posts effectively."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        max_tokens: 1000,
+        temperature: 0.7
+      });
+
+      const outline = completion.choices[0].message.content;
+      console.log('Generated outline:', outline);
+
+      // Update the entry with the generated outline
+      const updatedEntry = await ContentCalendar.findByIdAndUpdate(
+        id, 
+        { outline },
+        { new: true, runValidators: true }
+      );
+
+      console.log('Updated entry:', updatedEntry);
+
+      res.json({
+        success: true,
+        data: { outline },
+        message: 'Content outline generated successfully'
+      });
+
+    } catch (error) {
+      console.error('Error generating outline:', error);
+      res.status(500).json({ 
+        error: 'Failed to generate outline',
+        details: error.message 
+      });
+    }
+  }
+
+  // Create blog content from outline using OpenAI
+  async createBlogFromOutline(req, res) {
+    try {
+      const { id } = req.params;
+      const { title, description, keywords, targetAudience, outline } = req.body;
+      const userId = req.user.id;
+
+      console.log('createBlogFromOutline called with:', { id, title, description, keywords, targetAudience, userId });
+
+      if (!outline) {
+        return res.status(400).json({ error: 'Outline is required to create blog content' });
+      }
+
+      if (!title) {
+        return res.status(400).json({ error: 'Title is required to create blog content' });
+      }
+
+      // Create OpenAI prompt for blog creation
+      const prompt = `Create a comprehensive, engaging blog post based on this outline:
+
+Title: ${title}
+Description: ${description || 'Not specified'}
+Keywords: ${keywords || 'Not specified'}
+Target Audience: ${targetAudience || 'General audience'}
+
+Outline:
+${outline}
+
+Requirements:
+- Write in a professional, engaging tone
+- Include proper headings (H1, H2, H3) based on the outline
+- Use the keywords naturally throughout the content
+- Target the specified audience
+- Include practical examples and actionable insights
+- Write 800-1200 words
+- Format in HTML with proper tags
+- Make it SEO-friendly and engaging
+- Ensure the content flows logically from the outline structure
+
+Please provide the complete blog post in HTML format.`;
+
+      console.log('OpenAI prompt for blog creation:', prompt);
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: [
+          {
+            role: "system",
+            content: "You are an expert content writer specializing in creating engaging, SEO-optimized blog posts. Always respond with properly formatted HTML content."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        max_tokens: 2000,
+        temperature: 0.7
+      });
+
+      const blogContent = completion.choices[0].message.content;
+      console.log('Generated blog content length:', blogContent.length);
+
+      // Update the entry with the generated blog content
+      const updatedEntry = await ContentCalendar.findByIdAndUpdate(
+        id, 
+        { content: blogContent },
+        { new: true, runValidators: true }
+      );
+
+      console.log('Updated entry with blog content:', updatedEntry._id);
+
+      res.json({
+        success: true,
+        data: { blogContent },
+        message: 'Blog created successfully from outline'
+      });
+
+    } catch (error) {
+      console.error('Error creating blog from outline:', error);
+      res.status(500).json({ 
+        error: 'Failed to create blog from outline',
+        details: error.message 
+      });
+    }
   }
 }
 
@@ -348,5 +556,9 @@ module.exports = {
   approveCalendar: controller.approveCalendar.bind(controller),
   getCalendar: controller.getCalendar.bind(controller),
   updateEntry: controller.updateEntry.bind(controller),
-  deleteEntry: controller.deleteEntry.bind(controller)
+  deleteEntry: controller.deleteEntry.bind(controller),
+  getEntry: controller.getEntry.bind(controller),
+  createEntry: controller.createEntry.bind(controller),
+  generateOutline: controller.generateOutline.bind(controller),
+  createBlogFromOutline: controller.createBlogFromOutline.bind(controller)
 };

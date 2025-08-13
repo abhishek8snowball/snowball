@@ -5,7 +5,6 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 exports.analyzeBrand = require("./brand/analyzeBrand").analyzeBrand;
 exports.getBrandAnalysis = require("./brand/analyzeBrand").getBrandAnalysis;
-// Removed unused mock endpoints - these were never called by frontend
 
 // Blog analysis endpoints
 exports.getBlogAnalysis = require("./brand/blogAnalysis").getBlogAnalysis;

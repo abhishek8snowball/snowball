@@ -1,4 +1,5 @@
 const axios = require('axios');
+const marked = require('marked');
 
 class CMSIntegration {
   constructor() {
@@ -48,7 +49,7 @@ class CMSIntegration {
       content: content.description,
       status: 'publish',
       excerpt: content.description.substring(0, 150),
-      categories: content.keywords.split(',').map(k => k.trim()),
+              categories: Array.isArray(content.keywords) ? content.keywords : content.keywords.split(',').map(k => k.trim()),
       meta: {
         target_audience: content.targetAudience,
         seo_keywords: content.keywords
@@ -80,7 +81,7 @@ class CMSIntegration {
       slug: content.title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
       'post-body': content.description,
       'post-summary': content.description.substring(0, 150),
-      'post-category': content.keywords.split(',').map(k => k.trim())[0],
+              'post-category': Array.isArray(content.keywords) ? content.keywords[0] : content.keywords.split(',').map(k => k.trim())[0],
       'post-meta-title': content.title,
       'post-meta-description': content.description.substring(0, 160),
       'post-meta-keywords': content.keywords
@@ -100,33 +101,197 @@ class CMSIntegration {
   }
 
   async publishToShopify(credentials, content) {
-    const { shopDomain, accessToken, apiVersion = '2024-01' } = credentials.authDetails;
+    const { shopDomain, accessToken, apiVersion = '2024-10' } = credentials.authDetails;
     
     if (!shopDomain || !accessToken) {
       throw new Error('Missing Shopify credentials');
     }
 
-    const postData = {
-      article: {
-        title: content.title,
-        body_html: content.description,
-        summary_html: content.description.substring(0, 150),
-        tags: content.keywords.split(',').map(k => k.trim()),
-        author: 'AI Content Generator',
-        published: true
+    // Validate content
+    if (!content.title || !content.description) {
+      throw new Error('Content must have title and description');
+    }
+
+    if (!Array.isArray(content.keywords) || content.keywords.length === 0) {
+      console.warn('Content has no keywords, using default tags');
+      content.keywords = ['AI Content', 'SEO'];
+    }
+
+    // Clean and validate content
+    const cleanTitle = content.title.trim();
+    const cleanDescription = content.description.trim();
+    const cleanTargetAudience = (content.targetAudience || 'General Audience').trim();
+    
+    if (cleanTitle.length < 3) {
+      throw new Error('Title must be at least 3 characters long');
+    }
+    
+    if (cleanDescription.length < 10) {
+      throw new Error('Description must be at least 10 characters long');
+    }
+
+    // First, check if we have a blog, create one if not
+    let blogId = 1;
+    try {
+      // Try to get existing blogs
+      const blogsResponse = await axios.get(`https://${shopDomain}/admin/api/${apiVersion}/blogs.json`, {
+        headers: {
+          'X-Shopify-Access-Token': accessToken,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (blogsResponse.data.blogs && blogsResponse.data.blogs.length > 0) {
+        blogId = blogsResponse.data.blogs[0].id;
+        console.log(`Using existing blog with ID: ${blogId}`);
+      } else {
+        // Create a new blog if none exists
+        const createBlogResponse = await axios.post(`https://${shopDomain}/admin/api/${apiVersion}/blogs.json`, {
+          blog: {
+            title: 'AI Generated Content',
+            handle: 'ai-content',
+            commentable: 'moderate'
+          }
+        }, {
+          headers: {
+            'X-Shopify-Access-Token': accessToken,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        blogId = createBlogResponse.data.blog.id;
+        console.log(`Created new blog with ID: ${blogId}`);
+      }
+    } catch (error) {
+      console.error('Error checking/creating blog:', error.message);
+      // Fallback to default blog ID
+      blogId = 1;
+    }
+
+    // Function to format content with Markdown
+    const formatContentWithMarkdown = (content) => {
+      try {
+        // Configure marked options for security and formatting
+        marked.setOptions({
+          breaks: true,        // Convert line breaks to <br>
+          gfm: true,          // GitHub Flavored Markdown
+          headerIds: true,    // Add IDs to headers for linking
+          mangle: false,      // Don't escape HTML
+          sanitize: false     // Allow HTML (we'll sanitize separately)
+        });
+
+        // Convert markdown to HTML
+        const htmlContent = marked.parse(content);
+        
+        // Basic HTML sanitization (remove potentially dangerous tags)
+        const sanitizedContent = htmlContent
+          .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+          .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+          .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, '')
+          .replace(/<embed\b[^<]*(?:(?!<\/embed>)<[^<]*)*<\/embed>/gi, '');
+        
+        return sanitizedContent;
+      } catch (error) {
+        console.error('Error formatting content with Markdown:', error);
+        // Fallback to basic paragraph formatting
+        return `<p>${content}</p>`;
       }
     };
 
-    const response = await axios.post(`https://${shopDomain}/admin/api/${apiVersion}/blogs/1/articles.json`, postData, {
-      headers: {
-        'X-Shopify-Access-Token': accessToken,
-        'Content-Type': 'application/json'
+    // Enhanced content with better formatting and SEO
+    const enhancedDescription = `
+      <div class="ai-content-article">
+        <div class="article-meta">
+          <p><strong>Target Audience:</strong> ${cleanTargetAudience}</p>
+          <p><strong>Published:</strong> ${new Date().toLocaleDateString()}</p>
+          <p><strong>Reading Time:</strong> ${Math.ceil(cleanDescription.length / 200)} min read</p>
+        </div>
+        
+        <div class="article-content">
+          <h1>${cleanTitle}</h1>
+          
+          <div class="table-of-contents">
+            <h2>What You'll Learn</h2>
+            <ul>
+              <li>Key insights about ${cleanTitle.toLowerCase()}</li>
+              <li>Practical strategies and best practices</li>
+              <li>Industry trends and future outlook</li>
+              <li>Actionable recommendations for your business</li>
+            </ul>
+          </div>
+          
+          <div class="main-content">
+            ${formatContentWithMarkdown(cleanDescription)}
+          </div>
+          
+          <div class="key-takeaways">
+            <h2>Key Takeaways</h2>
+            <ul>
+              <li>Understand the importance of ${cleanTitle.toLowerCase()}</li>
+              <li>Implement proven strategies for success</li>
+              <li>Stay ahead of industry trends</li>
+              <li>Optimize your business performance</li>
+            </ul>
+          </div>
+        </div>
+        
+        <div class="article-footer">
+          <p><strong>Keywords:</strong> ${Array.isArray(content.keywords) ? content.keywords.join(', ') : content.keywords}</p>
+          <p><strong>SEO Optimized:</strong> This content is designed to rank well in search engines</p>
+          <p><em>Generated by AI Content Creator - Optimized for ${cleanTargetAudience}</em></p>
+        </div>
+      </div>
+    `;
+
+    const postData = {
+      article: {
+        title: cleanTitle,
+        body_html: enhancedDescription,
+        summary_html: cleanDescription.substring(0, 150),
+        tags: Array.isArray(content.keywords) ? content.keywords : content.keywords.split(',').map(k => k.trim()),
+        author: 'AI Content Generator',
+        published: true,
+        // Add SEO meta fields
+        seo: {
+          title: cleanTitle,
+          description: cleanDescription.substring(0, 160),
+          keywords: Array.isArray(content.keywords) ? content.keywords.join(', ') : content.keywords
+        }
       }
+    };
+
+    console.log(`Publishing to Shopify blog ${blogId}:`, {
+      title: cleanTitle,
+      keywords: content.keywords,
+      descriptionLength: cleanDescription.length,
+      targetAudience: cleanTargetAudience
     });
+
+    console.log('Post data being sent to Shopify:', JSON.stringify(postData, null, 2));
+
+    let response;
+    try {
+      response = await axios.post(`https://${shopDomain}/admin/api/${apiVersion}/blogs/${blogId}/articles.json`, postData, {
+        headers: {
+          'X-Shopify-Access-Token': accessToken,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log(`Successfully published to Shopify:`, response.data.article.id);
+    } catch (error) {
+      console.error('Shopify publishing error details:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        errors: error.response?.data?.errors,
+        message: error.message
+      });
+      throw error;
+    }
 
     return {
       postId: response.data.article.id,
-      url: `https://${shopDomain}/blogs/news/${response.data.article.handle}`
+      url: `https://${shopDomain}/blogs/ai-content/${response.data.article.handle}`
     };
   }
 
@@ -142,7 +307,7 @@ class CMSIntegration {
         title: content.title,
         excerpt: content.description.substring(0, 150),
         content: content.description,
-        tags: content.keywords.split(',').map(k => k.trim()),
+        tags: Array.isArray(content.keywords) ? content.keywords : content.keywords.split(',').map(k => k.trim()),
         status: 'PUBLISHED'
       }
     };
@@ -219,17 +384,44 @@ class CMSIntegration {
   async testShopifyConnection(credentials) {
     const { shopDomain, accessToken } = credentials.authDetails;
     
-    const response = await axios.get(`https://${shopDomain}/admin/api/2024-01/shop.json`, {
-      headers: {
-        'X-Shopify-Access-Token': accessToken
-      }
-    });
+    if (!shopDomain || !accessToken) {
+      throw new Error('Missing Shopify credentials: shopDomain and accessToken are required');
+    }
 
-    return {
-      success: true,
-      shop: response.data.shop.name,
-      domain: shopDomain
-    };
+    // Ensure shopDomain doesn't have protocol
+    const cleanShopDomain = shopDomain.replace(/^https?:\/\//, '');
+    
+    console.log('Testing Shopify connection for:', cleanShopDomain);
+    
+    try {
+      const response = await axios.get(`https://${cleanShopDomain}/admin/api/2024-10/shop.json`, {
+        headers: {
+          'X-Shopify-Access-Token': accessToken,
+          'Content-Type': 'application/json'
+        },
+        timeout: 10000 // 10 second timeout
+      });
+
+      console.log('Shopify API response:', response.status, response.data);
+      
+      return {
+        success: true,
+        shop: response.data.shop.name,
+        domain: cleanShopDomain
+      };
+    } catch (error) {
+      console.error('Shopify connection test failed:', error.response?.status, error.response?.data);
+      
+      if (error.response?.status === 401) {
+        throw new Error('Invalid access token. Please check your Shopify access token.');
+      } else if (error.response?.status === 404) {
+        throw new Error('Shop domain not found. Please check your shop domain.');
+      } else if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
+        throw new Error('Cannot connect to Shopify store. Please check your shop domain.');
+      } else {
+        throw new Error(`Shopify API error: ${error.response?.data?.errors || error.message}`);
+      }
+    }
   }
 
   async testWixConnection(credentials) {

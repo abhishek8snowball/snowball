@@ -142,7 +142,10 @@ const DomainAnalysis = ({ onClose, initialDomain = "" }) => {
     
     try {
       console.log('Starting domain analysis for:', domainToAnalyze);
-      const response = await apiService.analyzeBrand({ domain: domainToAnalyze });
+      const response = await apiService.analyzeBrand({ 
+        domain: domainToAnalyze,
+        brandName: domainToAnalyze 
+      });
       console.log('Domain analysis completed:', response.data);
       setResult(response.data);
       setCurrentStep("Analysis complete!");

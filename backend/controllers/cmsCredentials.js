@@ -12,11 +12,14 @@ class CMSCredentialsController {
       }
 
       // Test the connection before saving
+      console.log(`Testing ${platform} connection with:`, { platform, authDetails });
+      
       const testResult = await cmsIntegration.testConnection(platform, { authDetails });
       
       if (!testResult.success) {
+        console.error(`${platform} connection test failed:`, testResult.error);
         return res.status(400).json({ 
-          error: 'Connection test failed', 
+          error: `Failed to connect to ${platform}`,
           details: testResult.error 
         });
       }

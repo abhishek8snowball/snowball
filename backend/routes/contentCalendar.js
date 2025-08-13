@@ -3,6 +3,9 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const contentCalendarController = require('../controllers/contentCalendar');
 const autoPublisher = require('../utils/autoPublisher');
+const ContentCalendar = require('../models/ContentCalendar');
+const CMSCredentials = require('../models/CMSCredentials'); // Added missing import
+const cmsIntegration = require('../utils/cmsIntegration'); // Added missing import
 
 // Apply auth middleware to all routes
 router.use(auth);
@@ -22,6 +25,201 @@ router.put('/:id', contentCalendarController.updateEntry);
 // Delete specific calendar entry
 router.delete('/:id', contentCalendarController.deleteEntry);
 
+// Get specific calendar entry (for editor)
+router.get('/:id', contentCalendarController.getEntry);
+
+// Create new calendar entry
+router.post('/entry', contentCalendarController.createEntry);
+
+// Generate content outline using OpenAI
+router.post('/:id/generate-outline', contentCalendarController.generateOutline);
+router.post('/:id/create-blog', contentCalendarController.createBlogFromOutline);
+
+// Debug route to check CMS credentials (remove in production)
+router.get('/debug/cms-credentials', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    console.log('Debug CMS credentials for user:', userId);
+    
+    const allCredentials = await CMSCredentials.find({ userId });
+    const activeCredentials = await CMSCredentials.findOne({ userId, isActive: true });
+    
+    console.log('All credentials found:', allCredentials.length);
+    console.log('Active credentials found:', !!activeCredentials);
+    
+    res.json({
+      userId,
+      allCredentials: allCredentials.map(c => ({
+        id: c._id,
+        platform: c.platform,
+        isActive: c.isActive,
+        createdAt: c.createdAt
+      })),
+      activeCredentials: activeCredentials ? {
+        id: activeCredentials._id,
+        platform: activeCredentials.platform,
+        isActive: activeCredentials.isActive
+      } : null
+    });
+  } catch (error) {
+    console.error('Debug error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Debug route to check content entries (remove in production)
+router.get('/debug/content-entries', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    console.log('Debug content entries for user:', userId);
+    
+    const allEntries = await ContentCalendar.find({ userId });
+    const publishedEntries = await ContentCalendar.find({ userId, status: 'published' });
+    const draftEntries = await ContentCalendar.find({ userId, status: 'draft' });
+    
+    console.log('All entries found:', allEntries.length);
+    console.log('Published entries:', publishedEntries.length);
+    console.log('Draft entries:', draftEntries.length);
+    
+    res.json({
+      userId,
+      totalEntries: allEntries.length,
+      publishedEntries: publishedEntries.length,
+      draftEntries: draftEntries.length,
+      sampleEntries: allEntries.slice(0, 3).map(e => ({
+        id: e._id,
+        title: e.title,
+        status: e.status,
+        userId: e.userId,
+        companyName: e.companyName
+      }))
+    });
+  } catch (error) {
+    console.error('Debug error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Publish specific content to Shopify
+router.post('/:id/publish', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    console.log('Publish request:', { id, userId, user: req.user });
+
+    // Get the content entry
+    const contentEntry = await ContentCalendar.findById(id);
+    if (!contentEntry) {
+      console.log('Content not found for ID:', id);
+      return res.status(404).json({ error: 'Content not found' });
+    }
+
+    console.log('Content entry found:', {
+      contentId: contentEntry._id,
+      contentUserId: contentEntry.userId,
+      contentTitle: contentEntry.title,
+      contentStatus: contentEntry.status
+    });
+
+    // Check if user owns this content
+    if (contentEntry.userId.toString() !== userId) {
+      console.log('Access denied - user mismatch:', {
+        contentUserId: contentEntry.userId.toString(),
+        requestUserId: userId
+      });
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Get user's CMS credentials - try to find any active credentials
+    const cmsCredentials = await CMSCredentials.findOne({ 
+      userId, 
+      isActive: true 
+    });
+    
+    console.log('CMS credentials lookup result:', {
+      userId,
+      cmsCredentialsFound: !!cmsCredentials,
+      platform: cmsCredentials?.platform,
+      isActive: cmsCredentials?.isActive
+    });
+    
+    if (!cmsCredentials) {
+      // Let's also check if there are any credentials at all for this user
+      const anyCredentials = await CMSCredentials.findOne({ userId });
+      if (anyCredentials) {
+        console.log('User has credentials but they are not active:', {
+          platform: anyCredentials.platform,
+          isActive: anyCredentials.isActive
+        });
+        return res.status(400).json({ 
+          error: `CMS credentials found for ${anyCredentials.platform} but they are not active. Please activate your CMS credentials first.` 
+        });
+      } else {
+        console.log('No CMS credentials found at all for user:', userId);
+        return res.status(400).json({ 
+          error: 'No CMS credentials found. Please set up your CMS credentials first in the Content Calendar settings.' 
+        });
+      }
+    }
+
+    // Prepare content for publishing
+    const contentToPublish = {
+      title: contentEntry.title,
+      description: contentEntry.description || contentEntry.content,
+      keywords: contentEntry.keywords,
+      targetAudience: contentEntry.targetAudience,
+      cmsPlatform: cmsCredentials.platform
+    };
+
+    console.log('Publishing content:', {
+      title: contentToPublish.title,
+      platform: cmsCredentials.platform,
+      userId: userId,
+      descriptionLength: contentToPublish.description?.length || 0
+    });
+
+    // Publish to CMS using cmsIntegration
+    const publishResult = await cmsIntegration.publishContent(
+      cmsCredentials.platform,
+      cmsCredentials,
+      contentToPublish
+    );
+
+    console.log('Publish result:', publishResult);
+
+    if (publishResult.success) {
+      // Update the entry with published status
+      await ContentCalendar.findByIdAndUpdate(id, {
+        status: 'published',
+        publishedAt: new Date(),
+        lastPublished: new Date(),
+        cmsPlatform: cmsCredentials.platform
+      });
+
+      res.json({
+        success: true,
+        message: `Content published successfully to ${cmsCredentials.platform}`,
+        data: publishResult
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        message: `Failed to publish to ${cmsCredentials.platform}`,
+        error: publishResult.error
+      });
+    }
+
+  } catch (error) {
+    console.error('Error publishing content:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to publish content',
+      error: error.message
+    });
+  }
+});
+
 // Manual trigger for auto-publishing (for testing)
 router.post('/publish/trigger', async (req, res) => {
   try {
@@ -30,6 +228,36 @@ router.post('/publish/trigger', async (req, res) => {
   } catch (error) {
     console.error('Error triggering auto-publishing:', error);
     res.status(500).json({ error: 'Failed to trigger auto-publishing' });
+  }
+});
+
+// Trigger immediate publishing of specific content
+router.post('/trigger-publish', async (req, res) => {
+  try {
+    const { contentId, companyName } = req.body;
+    
+    if (!contentId || !companyName) {
+      return res.status(400).json({ error: 'Content ID and company name are required' });
+    }
+
+    // Trigger immediate publishing for this specific content
+    const result = await autoPublisher.publishSpecificContent(contentId, companyName);
+    
+    if (result.success) {
+      res.json({ 
+        success: true, 
+        message: 'Content published successfully',
+        data: result
+      });
+    } else {
+      res.status(400).json({ 
+        success: false, 
+        error: result.error 
+      });
+    }
+  } catch (error) {
+    console.error('Error triggering immediate publishing:', error);
+    res.status(500).json({ error: 'Failed to trigger immediate publishing' });
   }
 });
 
@@ -52,6 +280,35 @@ router.post('/publish/retry', async (req, res) => {
   } catch (error) {
     console.error('Error retrying failed publishing:', error);
     res.status(500).json({ error: 'Failed to retry failed publishing' });
+  }
+});
+
+// Fix all content to use Shopify platform
+router.post('/fix-platform', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { companyName } = req.body;
+    
+    if (!companyName) {
+      return res.status(400).json({ error: 'Company name is required' });
+    }
+
+    // Update all content for this company to use Shopify
+    const result = await ContentCalendar.updateMany(
+      { userId, companyName },
+      { cmsPlatform: 'shopify' }
+    );
+
+    console.log(`Updated ${result.modifiedCount} content items to use Shopify platform`);
+
+    res.json({ 
+      success: true, 
+      message: `Updated ${result.modifiedCount} content items to use Shopify platform`,
+      modifiedCount: result.modifiedCount
+    });
+  } catch (error) {
+    console.error('Error fixing platform:', error);
+    res.status(500).json({ error: 'Failed to fix platform' });
   }
 });
 

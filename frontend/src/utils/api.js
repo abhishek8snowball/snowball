@@ -92,7 +92,6 @@ export const apiService = {
     console.log('Getting user brands');
     return api.get('/api/v1/brand/user/brands');
   },
-  // Removed unused API methods that called mock endpoints
   
   // Categories and Prompts
   getCategoryPrompts: (categoryId) => api.get(`/api/v1/brand/categories/${categoryId}/prompts`),
@@ -105,12 +104,49 @@ export const apiService = {
   updateCalendarEntry: (id, data) => api.put(`/api/v1/content-calendar/${id}`, data),
   deleteCalendarEntry: (id) => api.delete(`/api/v1/content-calendar/${id}`),
   
+  // Blog Editor - Individual Post Management
+  getContentCalendarEntry: (id) => api.get(`/api/v1/content-calendar/${id}`),
+  createContentCalendarEntry: (data) => api.post('/api/v1/content-calendar/entry', data),
+  updateContentCalendarEntry: (id, data) => api.put(`/api/v1/content-calendar/${id}`, data),
+  generateContentOutline: async (postId, outlineData) => {
+    try {
+      const response = await api.post(`/api/v1/content-calendar/${postId}/generate-outline`, outlineData);
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Create blog content from outline
+  createBlogFromOutline: async (postId, blogData) => {
+    try {
+      const response = await api.post(`/api/v1/content-calendar/${postId}/create-blog`, blogData);
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Publish content to Shopify
+  publishContent: async (postId) => {
+    try {
+      const response = await api.post(`/api/v1/content-calendar/${postId}/publish`, {});
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  },
+  
   // CMS Credentials
   saveCMSCredentials: (data) => api.post('/api/v1/cms-credentials', data),
   getCMSCredentials: (params) => api.get('/api/v1/cms-credentials', { params }),
   testCMSConnection: (data) => api.post('/api/v1/cms-credentials/test', data),
   deleteCMSCredentials: (id) => api.delete(`/api/v1/cms-credentials/${id}`),
   deactivateCMSCredentials: (id) => api.patch(`/api/v1/cms-credentials/${id}/deactivate`),
+  
+  // Auto-publishing
+  triggerAutoPublish: (data) => api.post('/api/v1/content-calendar/trigger-publish', data),
+  fixContentPlatform: (data) => api.post('/api/v1/content-calendar/fix-platform', data),
   
 
   

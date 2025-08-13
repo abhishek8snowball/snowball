@@ -23,12 +23,20 @@ const contentCalendarSchema = new mongoose.Schema({
     required: true
   },
   keywords: {
-    type: String,
+    type: [String], // Changed from String to [String] array
     required: true
   },
   targetAudience: {
     type: String,
     required: true
+  },
+  content: {
+    type: String,
+    default: ''
+  },
+  outline: {
+    type: String,
+    default: ''
   },
   status: {
     type: String,

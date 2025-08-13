@@ -110,12 +110,16 @@ class AutoPublisher {
     return result;
   }
 
-  async publishSpecificContent(contentId) {
+  async publishSpecificContent(contentId, companyName) {
     try {
-      const content = await ContentCalendar.findById(contentId).populate('userId');
+      // Find content by ID and company name
+      const content = await ContentCalendar.findOne({
+        _id: contentId,
+        companyName: companyName
+      }).populate('userId');
       
       if (!content) {
-        throw new Error('Content not found');
+        throw new Error('Content not found for this company');
       }
 
       if (content.status !== 'approved') {
@@ -123,10 +127,18 @@ class AutoPublisher {
       }
 
       const result = await this.publishContent(content);
-      return result;
+      
+      return {
+        success: true,
+        message: `Content "${content.title}" published successfully to ${content.cmsPlatform}`,
+        data: result
+      };
     } catch (error) {
       console.error(`Error publishing specific content ${contentId}:`, error);
-      throw error;
+      return {
+        success: false,
+        error: error.message
+      };
     }
   }
 

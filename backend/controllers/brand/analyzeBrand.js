@@ -2,6 +2,12 @@ const OpenAI = require("openai");
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const TokenCostLogger = require("../../utils/tokenCostLogger");
 
+// Import legacy models
+const BrandShareOfVoice = require("../../models/BrandShareOfVoice");
+const BrandCategory = require("../../models/BrandCategory");
+const CategorySearchPrompt = require("../../models/CategorySearchPrompt");
+const PromptAIResponse = require("../../models/PromptAIResponse");
+
 const { findOrCreateBrandProfile } = require("./brandProfile");
 const { extractCategories, saveCategories } = require("./category");
 const { generateAndSavePrompts } = require("./prompt");
@@ -11,7 +17,6 @@ const { calculateMetrics } = require("./metrics");
 const { generateBrandDescription } = require("./description");
 const { extractCompetitorsWithOpenAI } = require("./extractCompetitors");
 const { calculateShareOfVoice } = require("./shareOfVoice");
-// Removed SEO audit import - not used anymore
 const BrandMatcher = require('./brandMatcher');
 const EntityRecognizer = require('./entityRecognizer');
 
@@ -28,156 +33,123 @@ exports.analyzeBrand = async (req, res) => {
 
   // Log analysis session start
   tokenLogger.logAnalysisStart(domain, brandName || domain);
+  const analysisStartTime = Date.now();
 
   try {
-    // 1. Brand profile
-    console.log("📝 Step 1: Creating brand profile...");
+    // 1. Create or find brand profile
+    console.log("📝 Step 1: Creating/finding brand profile...");
     const brand = await findOrCreateBrandProfile({ domain, brandName, userId });
-    console.log("✅ Brand profile created:", brand.brandName);
+    console.log("✅ Brand profile ready:", brand.brandName);
 
-    // After creating/finding the brand profile:
-    const brandMatcher = new BrandMatcher();
-    brandMatcher.addDomainBrand(domain, brand.brandName);
-
-    const entityRecognizer = new EntityRecognizer();
-
-    // 2. Categories
-    console.log("🏷️ Step 2: Extracting categories with Perplexity API...");
+    // 2. Extract categories
+    console.log("🏷️ Step 2: Extracting categories...");
     const categories = await extractCategories(domain);
     console.log("✅ Categories extracted:", categories);
+
+    // 3. Save categories
+    console.log("💾 Step 3: Saving categories...");
     const catDocs = await saveCategories(brand, categories);
     console.log("✅ Categories saved:", catDocs.length, "categories");
 
-    // 3. Dedicated Competitor Extraction (moved up to avoid redundant prompt generation)
-    console.log("🏢 Step 3: Extracting competitors with OpenAI...");
-    let competitors = [];
-    try {
-      competitors = await extractCompetitorsWithOpenAI(openai, brand);
-      console.log("✅ Competitors extracted:", competitors);
-    } catch (error) {
-      console.error("❌ Error extracting competitors:", error);
-      competitors = ["competitor1", "competitor2", "competitor3"]; // Fallback
-    }
+    // 4. Generate prompts
+    console.log("📝 Step 4: Generating prompts...");
+    const categoryPrompts = await generateAndSavePrompts(openai, catDocs, brand, []);
+    console.log("✅ Prompts generated:", categoryPrompts.length, "prompts");
 
-    // 4. Generate prompts with real competitors (only once)
-    console.log("🤖 Step 4: Generating prompts with OpenAI (keywords + questions)...");
-    let prompts = [];
-    try {
-      prompts = await generateAndSavePrompts(openai, catDocs, brand, competitors);
-      console.log("✅ Prompts generated with competitors:", prompts.length, "prompts");
-    } catch (error) {
-      console.error("❌ Error generating prompts:", error);
-      prompts = [];
-    }
+    // 5. Run prompts and save responses
+    console.log("🤖 Step 5: Running prompts...");
+    const aiResponses = await runPromptsAndSaveResponses(openai, categoryPrompts, brand);
+    console.log("✅ AI responses generated:", aiResponses.length, "responses");
 
-    // 5. AI Responses
-    console.log("🧠 Step 5: Running prompts and getting AI responses...");
-    const aiResponses = await runPromptsAndSaveResponses(openai, prompts);
-    console.log("✅ AI responses received:", aiResponses.length, "responses");
+    // 6. Extract competitors
+    console.log("🏆 Step 6: Extracting competitors...");
+    const competitors = await extractCompetitorsWithOpenAI(openai, brand);
+    console.log("✅ Competitors extracted:", competitors);
 
-    // 6. Insights & Competitors
-    console.log("🔍 Step 6: Parsing insights and competitors...");
-    await parseInsightsAndCompetitors(aiResponses, brand);
-    console.log("✅ Insights and competitors parsed");
+    // 7. Calculate share of voice
+    console.log("📊 Step 7: Calculating share of voice...");
+    const sovResult = await calculateShareOfVoice(brand, competitors, aiResponses, catDocs[0]?._id);
+    console.log("✅ Share of voice calculated");
 
-    // 7. Metrics
-    console.log("📊 Step 7: Calculating metrics...");
-    await calculateMetrics(aiResponses, brand);
-    console.log("✅ Metrics calculated");
+    // 8. Generate brand description
+    console.log("📝 Step 8: Generating brand description...");
+    const brandDescription = await generateBrandDescription(openai, { domain, brandName });
+    console.log("✅ Brand description generated");
 
-    // 8. Share of Voice Calculation
-    console.log("📈 Step 8: Calculating Share of Voice...");
-    let sovResult = { shareOfVoice: {}, mentionCounts: {}, totalMentions: 0 };
-    try {
-      sovResult = await calculateShareOfVoice(
-        brand,
-        competitors,
-        aiResponses,
-        catDocs[0]?._id
-      );
-      console.log("✅ Share of Voice calculated:", sovResult);
-    } catch (error) {
-      console.error("❌ Error calculating Share of Voice:", error);
-      // Create fallback Share of Voice data
-      sovResult = {
-        shareOfVoice: { [brand.brandName.toLowerCase()]: 50 },
-        mentionCounts: { [brand.brandName.toLowerCase()]: 5 },
-        totalMentions: 10,
-        brandShare: 50
-      };
-    }
-
-    // 9. Description
-    console.log("📝 Step 9: Generating brand description...");
-    let brandDescription = "";
-    try {
-      brandDescription = await generateBrandDescription(openai, brand);
-      console.log("✅ Brand description generated");
-    } catch (error) {
-      console.error("❌ Error generating brand description:", error);
-      brandDescription = `Analysis of ${brand.brandName} (${brand.domain})`;
-    }
-
-    // 10. Blog Analysis - Ready for optional execution
-    console.log("📝 Step 10: Blog analysis ready (triggered by user)");
-    const blogAnalysis = { 
-      blogs: [], 
-      status: "ready", 
-      message: "Blog analysis can be triggered separately" 
-    };
-
-    console.log("=== 🎉 Brand Analysis Complete ===");
-    console.log("📊 Final Results Summary:");
-    console.log("   - Brand:", brand.brandName);
-    console.log("   - Categories:", categories.length);
-    console.log("   - Competitors:", competitors.length);
-    console.log("   - SEO: Skipped (not displayed)");
-    console.log("   - Share of Voice:", sovResult.brandShare || 0, "%");
-    console.log("   - Blogs: Use separate blog extraction endpoint");
-
-    // Log cost summary
-    console.log("=== 💰 API Cost Summary ===");
-    const costSummary = tokenLogger.getSummary();
-    console.log("   - Perplexity Pricing:", costSummary.perplexityPricing);
-    console.log("   - OpenAI Pricing:", costSummary.openaiPricing);
-    console.log("   - Log File:", costSummary.logFile);
-    console.log("   - Note:", costSummary.note);
-    console.log("   - Check individual API call logs above for detailed costs");
-
-    // Log analysis session end
-    tokenLogger.logAnalysisEnd();
-
-    res.json({
-      brand: brand.brandName,
-      domain: brand.domain,
+    // 9. Save all data to BrandShareOfVoice
+    console.log("💾 Step 9: Saving analysis results...");
+    const analysisData = {
+      brandId: brand._id,
+      userId,
+      domain,
+      brandName: brand.brandName,
       description: brandDescription,
-      brandId: brand._id, // Add brandId for frontend use
-      categories: catDocs, // Send the saved category objects with _id
+      categories: catDocs.map(cat => cat._id), // Save only ObjectIds
+      categoryPrompts: categoryPrompts.map(prompt => prompt._id), // Save only ObjectIds
+      aiResponses: aiResponses.map(response => response.aiDoc._id), // Save only ObjectIds
       competitors,
       shareOfVoice: sovResult.shareOfVoice,
       mentionCounts: sovResult.mentionCounts,
       totalMentions: sovResult.totalMentions,
       brandShare: sovResult.brandShare,
-      blogAnalysis, // Add blog analysis results
-      status: "Analysis complete.",
-      costInfo: {
-        note: "Check server logs and log file for detailed token usage and cost breakdown for each API call",
-        logFile: costSummary.logFile,
-        pricing: costSummary
-      }
-    });
-  } catch (err) {
-    console.error("=== 💥 Domain Analysis Error ===");
-    console.error("❌ Error details:", err);
-    console.error("📚 Stack trace:", err.stack);
+      aiVisibilityScore: sovResult.aiVisibilityScore,
+      analysisDate: new Date(),
+      duration: Math.round((Date.now() - analysisStartTime) / 1000),
+      // Add missing fields for schema compatibility
+      categoryId: catDocs[0]?._id, // Use first category ID if available
+      calculatedAt: new Date()
+    };
+
+    const brandAnalysis = new BrandShareOfVoice(analysisData);
+    await brandAnalysis.save();
+    console.log("✅ Analysis results saved to database");
+
+    // 10. Log token usage and complete
+    const analysisEndTime = Date.now();
+    const totalDuration = Math.round((analysisEndTime - analysisStartTime) / 1000);
     
-    // Log analysis session end with error
     tokenLogger.logAnalysisEnd();
     
+    console.log("=== 🎉 Brand Analysis Complete ===");
+    console.log("⏱️ Total duration:", totalDuration, "seconds");
+    console.log("📊 Results:", {
+      categories: catDocs.length,
+      competitors: competitors.length,
+      shareOfVoice: Object.keys(sovResult.shareOfVoice).length,
+      totalMentions: sovResult.totalMentions
+    });
+
+    // Return success response
+    res.json({
+      success: true,
+      msg: "Brand analysis completed successfully",
+      brand: brand.brandName,
+      domain: brand.domain,
+      description: brandDescription,
+      brandId: brand._id,
+      analysisId: brandAnalysis._id,
+      categories: catDocs, // Send full category objects to frontend
+      competitors,
+      shareOfVoice: sovResult.shareOfVoice,
+      mentionCounts: sovResult.mentionCounts,
+      totalMentions: sovResult.totalMentions,
+      brandShare: sovResult.brandShare,
+      aiVisibilityScore: sovResult.aiVisibilityScore,
+      analysisDate: brandAnalysis.analysisDate,
+      duration: totalDuration
+    });
+
+  } catch (error) {
+    console.error("=== 💥 Analysis Error ===");
+    console.error("❌ Error details:", error);
+    
+    // Log token usage on error
+    console.error("Token usage logging skipped due to error");
+    
     res.status(500).json({ 
-      msg: "Domain analysis failed", 
-      error: err.message, 
-      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined 
+      success: false,
+      msg: "Analysis failed", 
+      error: error.message 
     });
   }
 };
@@ -201,61 +173,49 @@ exports.getBrandAnalysis = async (req, res) => {
 
     console.log("✅ Brand ownership validated:", brand.brandName);
 
-    // Get categories for this brand
-    const BrandCategory = require("../../models/BrandCategory");
-    const categories = await BrandCategory.find({ brandId: brand._id }).sort({ createdAt: 1 });
-    console.log("✅ Categories found:", categories.length);
+    // Get the most recent analysis for this brand
+    const latestAnalysis = await BrandShareOfVoice.findOne({ brandId: brand._id, userId })
+      .sort({ analysisDate: -1 });
 
-    // Get competitors from AICompetitorMention collection
-    const AICompetitorMention = require("../../models/AICompetitorMention");
-    const competitorMentions = await AICompetitorMention.find({}).sort({ createdAt: -1 });
-    
-    // Extract unique competitor names
-    const competitors = [...new Set(competitorMentions.map(mention => mention.competitorName))];
-    console.log("✅ Competitors found:", competitors.length, competitors);
-
-    // Get Share of Voice data
-    const BrandShareOfVoice = require("../../models/BrandShareOfVoice");
-    const shareOfVoiceData = await BrandShareOfVoice.findOne({ brandId: brand._id }).sort({ createdAt: -1 });
-    
-    let sovResult = { shareOfVoice: {}, mentionCounts: {}, totalMentions: 0, brandShare: 0 };
-    if (shareOfVoiceData) {
-      sovResult = {
-        shareOfVoice: shareOfVoiceData.shareOfVoice || {},
-        mentionCounts: shareOfVoiceData.mentionCounts || {},
-        totalMentions: shareOfVoiceData.totalMentions || 0,
-        brandShare: shareOfVoiceData.brandShare || 0
-      };
+    if (!latestAnalysis) {
+      return res.status(404).json({ 
+        success: false,
+        msg: "No analysis found for this brand. Please run a new analysis first." 
+      });
     }
-    console.log("✅ Share of Voice data:", sovResult);
 
-    // Get brand description (you might want to store this in the database)
-    const brandDescription = `${brand.brandName} provides an AI-powered platform designed for sales teams and sales development representatives (SDRs).`;
+    // Since we changed from Map to Object types, no conversion needed
+    const shareOfVoice = latestAnalysis.shareOfVoice || {};
+    const mentionCounts = latestAnalysis.mentionCounts || {};
 
-    console.log("=== 🎉 Brand Analysis Retrieved ===");
-    console.log("📊 Results Summary:");
-    console.log("   - Brand:", brand.brandName);
-    console.log("   - Categories:", categories.length);
-    console.log("   - Competitors:", competitors.length);
-    console.log("   - Share of Voice:", sovResult.brandShare, "%");
+    console.log("✅ Brand analysis retrieved:", {
+      categories: latestAnalysis.categories?.length || 0,
+      competitors: latestAnalysis.competitors?.length || 0,
+      shareOfVoice: Object.keys(shareOfVoice).length,
+      analysisDate: latestAnalysis.analysisDate
+    });
 
     res.json({
-      brand: brand.brandName,
-      domain: brand.domain,
-      description: brandDescription,
-      brandId: brand._id,
-      categories,
-      competitors,
-      shareOfVoice: sovResult.shareOfVoice,
-      mentionCounts: sovResult.mentionCounts,
-      totalMentions: sovResult.totalMentions,
-      brandShare: sovResult.brandShare,
+      success: true,
+      brand: latestAnalysis.brandName,
+      domain: latestAnalysis.domain,
+      description: latestAnalysis.description || `${latestAnalysis.brandName} provides an AI-powered platform designed for sales teams and sales development representatives (SDRs).`,
+      brandId: latestAnalysis.brandId,
+      categories: latestAnalysis.categories || [],
+      competitors: latestAnalysis.competitors || [],
+      shareOfVoice: shareOfVoice,
+      mentionCounts: mentionCounts,
+      totalMentions: latestAnalysis.totalMentions || 0,
+      brandShare: latestAnalysis.brandShare || 0,
+      aiVisibilityScore: latestAnalysis.aiVisibilityScore || 0,
       status: "Analysis retrieved from database."
     });
+
   } catch (err) {
     console.error("=== 💥 Brand Analysis Retrieval Error ===");
     console.error("❌ Error details:", err);
     res.status(500).json({ 
+      success: false,
       msg: "Failed to retrieve brand analysis", 
       error: err.message
     });
