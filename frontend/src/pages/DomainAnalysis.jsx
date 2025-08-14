@@ -505,6 +505,8 @@ const DomainAnalysis = ({ onClose, initialDomain = "" }) => {
                 totalMentions={result.totalMentions}
                 brandShare={result.brandShare}
                 aiVisibilityScore={result.aiVisibilityScore}
+                brandId={result.brandId}
+                brandName={result.brand}
               />
             </div>
           </div>
