@@ -31,7 +31,7 @@ const Login = () => {
       const response = await apiService.login(formData);
       
       if (response.data.token) {
-        localStorage.setItem('auth', JSON.stringify(response.data.token));
+        localStorage.setItem('auth', response.data.token);
         toast.success('Login successful!');
         navigate('/dashboard');
       } else {

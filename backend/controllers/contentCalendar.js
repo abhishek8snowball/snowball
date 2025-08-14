@@ -398,32 +398,127 @@ class ContentCalendarController {
         return res.status(400).json({ error: 'Title is required to generate outline' });
       }
 
-      // Create OpenAI prompt for outline generation
-      const prompt = `Generate a detailed content outline for a blog post titled "${title}".
+      // Fetch user's brand settings to include brand tonality and information
+      let brandContext = '';
+      let brandSettings = null; // Declare outside the if block
+      let userDomain = ''; // Add domain variable
+      
+      try {
+        const UserBrandSettings = require('../models/UserBrandSettings');
+        const BrandProfile = require('../models/BrandProfile'); // Add BrandProfile import
+        
+        brandSettings = await UserBrandSettings.findOne({ userId });
+        
+        // Fetch user's domain from brand profile
+        try {
+          const brandProfile = await BrandProfile.findOne({ ownerUserId: userId })
+            .sort({ updatedAt: -1 });
+          userDomain = brandProfile?.domain || 'your-website.com';
+        } catch (domainError) {
+          console.log('Could not fetch domain:', domainError.message);
+          userDomain = 'your-website.com';
+        }
+        
+        if (brandSettings) {
+          brandContext = `
+Brand Context:
+- Brand Tonality: ${brandSettings.brandTonality || 'Professional and informative'}
+- Brand Information: ${brandSettings.brandInformation || 'No specific brand information provided'}
 
-Description: ${description || 'No description provided'}
+`;
+          console.log('Brand settings found:', {
+            tonality: brandSettings.brandTonality,
+            info: brandSettings.brandInformation
+          });
+        } else {
+          console.log('No brand settings found for user:', userId);
+          brandContext = `
+Brand Context:
+- Brand Tonality: Professional and engaging (default)
+- Brand Information: No specific brand information provided
 
-Keywords: ${keywords || 'No keywords provided'}
+`;
+        }
+      } catch (brandError) {
+        console.log('Error fetching brand settings:', brandError.message);
+        // Continue without brand settings if there's an error
+        brandContext = `
+Brand Context:
+- Brand Tonality: Professional and engaging (default)
+- Brand Information: No specific brand information provided
 
-Target Audience: ${targetAudience || 'General audience'}
+`;
+        userDomain = 'your-website.com';
+      }
 
-Please create a comprehensive outline with:
-1. Introduction section
-2. Main content sections (3-5 sections with subsections)
-3. Conclusion section
-4. Key takeaways
-5. Call-to-action suggestions
+      // Create OpenAI prompt for outline generation with brand context
+      // Create OpenAI prompt for outline generation with GEO + brand context
+const prompt = `
+You are a content strategist and SEO expert trained in Generative Engine Optimization (GEO).
 
-Format the response as HTML with proper heading tags (h2, h3) and bullet points.`;
+I want you to create a skyscraper content outline for the blog topic: "${title}".
+The content will be published on: ${userDomain}
 
-      console.log('OpenAI prompt:', prompt);
+Add links to authoritative sources wherever relevant. Cite recent, credible statistics with active URLs.
+
+What the brand does: ${brandSettings?.brandInformation || '[No specific brand information provided]'}
+
+Blog tone/style to match: ${brandSettings?.brandTonality || 'Professional and engaging (default)'}
+
+Your task is to generate a GEO-optimized skyscraper content outline, engineered to achieve a high GEO score based on the 15-point framework below. Every header (H1, H2, H3) must be phrased as a question to maximize AI query match potential, with structure, depth, and formatting optimized to perform well for both AI search and human readers.
+
+Ensure that:
+- The outline reflects topical authority and depth
+- Uses structured sections and clear headers for better AI parsing
+- Anticipates zero-click answers and featured snippet formats
+- Includes factual, high-authority references only (double-check links are active)
+- Inserts contextually relevant CTAs linking to ${userDomain}
+- Considers interlinking opportunities, metadata hints, and AI-prominent phrasing
+- Optionally includes suggested intro format, multimodal elements (charts, visuals), and semantic clusters for related topics
+
+Final output format:
+H1 + section breakdowns (with H2/H3s as needed)
+CTA and internal link placement notes
+Credible source references (active URLs only)
+
+✅ GEO 15-point framework for guidance:
+1. Topical Authority & Depth
+2. Structured Format for AI
+3. Explicit, Fact-Based Answers
+4. Zero-Click Optimization
+5. Entity & Semantic Optimization
+6. Format Diversity (lists, tables, Q&A)
+7. Metadata & Titles
+8. Search Intent Match
+9. Authoritativeness
+10. Originality & AI-Evasiveness
+11. Multimodal Enhancements
+12. Internal Linking
+13. Machine Readability
+14. AI-Query Phrasing
+15. GEO Performance Strategy
+`;
+
+      // Validate prompt before sending to OpenAI
+      if (!prompt || prompt.length < 100) {
+        throw new Error('Generated prompt is invalid or too short');
+      }
+
+      console.log('OpenAI prompt with brand context:', prompt);
+      console.log('Using domain for content generation:', userDomain);
 
       const completion = await openai.chat.completions.create({
         model: "gpt-3.5-turbo",
         messages: [
           {
             role: "system",
-            content: "You are a professional content strategist and copywriter. Create detailed, actionable content outlines that help writers structure their blog posts effectively."
+            content: `You are a professional content strategist and copywriter specializing in brand-aligned content. Create detailed, actionable content outlines that help writers structure their blog posts effectively while maintaining consistency with the brand's voice, tone, and messaging style.
+
+When provided with brand context, ensure that:
+- The outline reflects the brand's established tonality
+- Content structure aligns with brand values and messaging
+- The overall approach matches the brand's communication style
+- Brand information is naturally integrated where relevant`
           },
           {
             role: "user",
@@ -435,7 +530,7 @@ Format the response as HTML with proper heading tags (h2, h3) and bullet points.
       });
 
       const outline = completion.choices[0].message.content;
-      console.log('Generated outline:', outline);
+      console.log('Generated outline with brand context:', outline);
 
       // Update the entry with the generated outline
       const updatedEntry = await ContentCalendar.findByIdAndUpdate(
@@ -449,7 +544,8 @@ Format the response as HTML with proper heading tags (h2, h3) and bullet points.
       res.json({
         success: true,
         data: { outline },
-        message: 'Content outline generated successfully'
+        message: 'Content outline generated successfully with brand context',
+        brandContext: brandContext ? 'Applied' : 'Not available'
       });
 
     } catch (error) {
@@ -478,7 +574,63 @@ Format the response as HTML with proper heading tags (h2, h3) and bullet points.
         return res.status(400).json({ error: 'Title is required to create blog content' });
       }
 
-      // Create OpenAI prompt for blog creation
+      // Fetch user's brand settings to include brand tonality and information
+      let brandContext = '';
+      let brandSettings = null; // Declare outside the if block
+      let userDomain = ''; // Add domain variable
+      
+      try {
+        const UserBrandSettings = require('../models/UserBrandSettings');
+        const BrandProfile = require('../models/BrandProfile'); // Add BrandProfile import
+        
+        brandSettings = await UserBrandSettings.findOne({ userId });
+        
+        // Fetch user's domain from brand profile
+        try {
+          const brandProfile = await BrandProfile.findOne({ ownerUserId: userId })
+            .sort({ updatedAt: -1 });
+          userDomain = brandProfile?.domain || 'your-website.com';
+        } catch (domainError) {
+          console.log('Could not fetch domain:', domainError.message);
+          userDomain = 'your-website.com';
+        }
+        
+        if (brandSettings) {
+          brandContext = `
+Brand Context:
+- Brand Tonality: ${brandSettings.brandTonality || 'Professional and informative'}
+- Brand Information: ${brandSettings.brandInformation || 'No specific brand information provided'}
+- Website: ${userDomain}
+
+`;
+          console.log('Brand settings found for blog creation:', {
+            tonality: brandSettings.brandTonality,
+            info: brandSettings.brandInformation,
+            domain: userDomain
+          });
+        } else {
+          console.log('No brand settings found for user during blog creation:', userId);
+          brandContext = `
+Brand Context:
+- Brand Tonality: Professional and engaging (default)
+- Brand Information: No specific brand information provided
+- Website: ${userDomain}
+
+`;
+        }
+      } catch (brandError) {
+        console.log('Error fetching brand settings for blog creation:', brandError.message);
+        // Continue without brand settings if there's an error
+        brandContext = `
+Brand Context:
+- Brand Tonality: Professional and engaging (default)
+- Brand Information: No specific brand information provided
+- Website: ${userDomain}
+
+`;
+      }
+
+      // Create OpenAI prompt for blog creation with brand context
       const prompt = `Create a comprehensive, engaging blog post based on this outline:
 
 Title: ${title}
@@ -486,11 +638,12 @@ Description: ${description || 'Not specified'}
 Keywords: ${keywords || 'Not specified'}
 Target Audience: ${targetAudience || 'General audience'}
 
-Outline:
+${brandContext}Outline:
 ${outline}
 
 Requirements:
-- Write in a professional, engaging tone
+- Write in a tone that matches the brand's established voice and style
+- Incorporate brand information naturally where relevant and appropriate
 - Include proper headings (H1, H2, H3) based on the outline
 - Use the keywords naturally throughout the content
 - Target the specified audience
@@ -499,17 +652,29 @@ Requirements:
 - Format in HTML with proper tags
 - Make it SEO-friendly and engaging
 - Ensure the content flows logically from the outline structure
+- Maintain consistency with the brand's messaging and values
+
+Important: The writing style, tone, and approach should align with the brand's established voice and communication style.
 
 Please provide the complete blog post in HTML format.`;
 
-      console.log('OpenAI prompt for blog creation:', prompt);
+      console.log('OpenAI prompt for blog creation with brand context:', prompt);
 
       const completion = await openai.chat.completions.create({
         model: "gpt-3.5-turbo",
         messages: [
           {
             role: "system",
-            content: "You are an expert content writer specializing in creating engaging, SEO-optimized blog posts. Always respond with properly formatted HTML content."
+            content: `You are an expert content writer specializing in creating engaging, SEO-optimized blog posts that align with specific brand voices and messaging styles.
+
+When provided with brand context, ensure that:
+- The writing tone matches the brand's established voice
+- Brand information is naturally integrated where relevant
+- The overall style reflects the brand's communication approach
+- Content maintains consistency with brand values and messaging
+- The voice remains authentic to the brand's identity
+
+Always respond with properly formatted HTML content that follows the provided outline structure.`
           },
           {
             role: "user",
@@ -521,7 +686,7 @@ Please provide the complete blog post in HTML format.`;
       });
 
       const blogContent = completion.choices[0].message.content;
-      console.log('Generated blog content length:', blogContent.length);
+      console.log('Generated blog content with brand context, length:', blogContent.length);
 
       // Update the entry with the generated blog content
       const updatedEntry = await ContentCalendar.findByIdAndUpdate(
@@ -535,7 +700,8 @@ Please provide the complete blog post in HTML format.`;
       res.json({
         success: true,
         data: { blogContent },
-        message: 'Blog created successfully from outline'
+        message: 'Blog created successfully from outline with brand context',
+        brandContext: brandContext ? 'Applied' : 'Not available'
       });
 
     } catch (error) {

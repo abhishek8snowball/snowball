@@ -1,17 +1,22 @@
 const express = require("express");
 const router = express.Router();
+const authenticationMiddleware = require("../middleware/auth");
 
-const { login, register, dashboard, getAllUsers, analyzeLink, suggestImprovements, getAnalysisHistory, deleteAnalysis } = require("../controllers/user");
-const authMiddleware = require('../middleware/auth')
+// Import authentication controllers
+const { login, register, dashboard, getAllUsers } = require("../controllers/user");
 
-router.route("/login").post(login);
-router.route("/register").post(register);
-router.route("/dashboard").get(authMiddleware, dashboard);
-router.route("/users").get(getAllUsers);
-router.route("/analyze").post(authMiddleware, analyzeLink);
-router.route("/suggest").post(authMiddleware, suggestImprovements);
-router.route("/history").get(authMiddleware, getAnalysisHistory);
-router.route("/history/:id").delete(authMiddleware, deleteAnalysis);
+// Import brand settings controllers
+const { getBrandSettings, saveBrandSettings, refreshBrandVoice } = require("../controllers/user/brandSettings");
 
+// Authentication routes
+router.post("/login", login);
+router.post("/register", register);
+router.get("/dashboard", authenticationMiddleware, dashboard);
+router.get("/users", authenticationMiddleware, getAllUsers);
+
+// Brand settings routes
+router.get("/brand-settings", authenticationMiddleware, getBrandSettings);
+router.post("/brand-settings", authenticationMiddleware, saveBrandSettings);
+router.post("/brand-settings/refresh", authenticationMiddleware, refreshBrandVoice);
 
 module.exports = router;

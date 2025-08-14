@@ -17,7 +17,7 @@ export const decodeToken = (token) => {
 
 export const getUserInfo = () => {
   try {
-    const token = JSON.parse(localStorage.getItem('auth') || 'null');
+    const token = localStorage.getItem('auth') || null;
     if (!token) return null;
     
     return decodeToken(token);

@@ -2,7 +2,7 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 
 // API Configuration
-const API_BASE_URL = 'https://geo-optimizer.onrender.com';
+const API_BASE_URL = 'http://localhost:5000';
 
 console.log('API Base URL:', API_BASE_URL);
 console.log('Environment:', import.meta.env.MODE);
@@ -19,7 +19,7 @@ const api = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
-    const token = JSON.parse(localStorage.getItem('auth')) || '';
+    const token = localStorage.getItem('auth') || '';
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -192,6 +192,11 @@ export const apiService = {
   // History
   getHistory: () => api.get('/api/v1/history'),
   deleteHistory: (id) => api.delete(`/api/v1/history/${id}`),
+  
+  // Brand Settings
+  getBrandSettings: () => api.get('/api/v1/brand-settings'),
+  saveBrandSettings: (data) => api.post('/api/v1/brand-settings', data),
+  refreshBrandVoice: () => api.post('/api/v1/brand-settings/refresh'),
   
   // Removed unused legacy endpoints
 };

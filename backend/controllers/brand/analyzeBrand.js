@@ -40,6 +40,14 @@ exports.analyzeBrand = async (req, res) => {
     console.log("📝 Step 1: Creating/finding brand profile...");
     const brand = await findOrCreateBrandProfile({ domain, brandName, userId });
     console.log("✅ Brand profile ready:", brand.brandName);
+    
+    // Log brand voice information if available
+    if (brand.brandTonality || brand.brandInformation) {
+      console.log("🎭 Brand voice information:", {
+        tonality: brand.brandTonality || "Not analyzed",
+        info: brand.brandInformation || "Not analyzed"
+      });
+    }
 
     // 2. Extract categories
     console.log("🏷️ Step 2: Extracting categories...");
@@ -76,8 +84,19 @@ exports.analyzeBrand = async (req, res) => {
     const brandDescription = await generateBrandDescription(openai, { domain, brandName });
     console.log("✅ Brand description generated");
 
-    // 9. Save all data to BrandShareOfVoice
-    console.log("💾 Step 9: Saving analysis results...");
+    // 9. Update brand profile with description and analyze voice
+    console.log("🎭 Step 9: Updating brand profile with voice analysis...");
+    try {
+      const { updateBrandProfileWithDescriptionAndVoice } = require("./brandProfile");
+      await updateBrandProfileWithDescriptionAndVoice(brand, brandDescription, domain, brandName);
+      console.log("✅ Brand profile updated with description and voice analysis");
+    } catch (voiceError) {
+      console.error("⚠️ Brand voice analysis failed:", voiceError.message);
+      // Continue without voice analysis - profile is still updated with description
+    }
+
+    // 10. Save all data to BrandShareOfVoice
+    console.log("💾 Step 10: Saving analysis results...");
     const analysisData = {
       brandId: brand._id,
       userId,

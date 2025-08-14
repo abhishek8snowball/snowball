@@ -6,6 +6,7 @@ import { Input } from '../components/ui/input';
 import DomainAnalysis from './DomainAnalysis';
 import BlogAnalysis from './BlogAnalysis';
 import ContentCalendarView from './ContentCalendarView';
+import BrandSettings from '../components/BrandSettings';
 import { apiService } from '../utils/api';
 import { getUserName } from '../utils/auth';
 import { 
@@ -488,6 +489,24 @@ const Dashboard = () => {
                   <div className="flex justify-end">
                     <Button className="gradient-primary">Save Profile</Button>
                   </div>
+                </CardContent>
+              </Card>
+
+              {/* Brand Settings */}
+              <Card className="border border-[#b0b0d8] bg-white">
+                <CardHeader>
+                  <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
+                    <div className="w-8 h-8 bg-[#7c77ff] rounded-lg flex items-center justify-center">
+                      <span className="text-sm font-bold text-white">🎨</span>
+                    </div>
+                    <span>Brand Settings</span>
+                  </CardTitle>
+                  <CardDescription className="text-[#4a4a6a]">
+                    Customize your brand's voice and information for personalized AI responses
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <BrandSettings />
                 </CardContent>
               </Card>
 

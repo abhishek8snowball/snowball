@@ -200,7 +200,13 @@ const BlogEditor = () => {
           outline: response.data.data.outline
         }));
         console.log('Outline generated successfully:', response.data.data.outline);
-        alert('Content outline generated successfully!');
+        
+        // Enhanced success message with brand context information
+        const brandContextInfo = response.data.brandContext === 'Applied' 
+          ? ' with your brand voice and style applied! 🎯'
+          : ' (brand settings not found - using default style)';
+        
+        alert(`Content outline generated successfully${brandContextInfo}`);
       } else {
         console.error('Invalid response structure for outline:', response);
         alert('Failed to generate outline. Please try again.');
@@ -252,7 +258,11 @@ const BlogEditor = () => {
         }));
         
         // Show success message
-        alert('Blog created successfully! Content is now in the editor below.');
+        const brandContextInfo = response.data.brandContext === 'Applied' 
+          ? ' with your brand voice and style applied! 🎯'
+          : ' (brand settings not found - using default style)';
+        
+        alert(`Blog created successfully${brandContextInfo} Content is now in the editor below.`);
         
         // Scroll to editor
         setTimeout(() => {
@@ -471,6 +481,19 @@ const BlogEditor = () => {
 
                          {/* Content Outline */}
              <div className="bg-white rounded-lg border border-gray-200 p-6">
+               {/* Brand Context Indicator */}
+               <div className="mb-4 p-3 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg">
+                 <div className="flex items-center space-x-2">
+                   <div className="w-2 h-2 bg-[#7765e3] rounded-full animate-pulse"></div>
+                   <span className="text-sm font-medium text-[#7765e3]">
+                     🎯 Brand Context Active
+                   </span>
+                 </div>
+                 <p className="text-xs text-gray-600 mt-1">
+                   Your brand tonality and information will automatically be applied to generated content
+                 </p>
+               </div>
+               
                <div className="flex items-center justify-between mb-4">
                  <h2 className="text-lg font-semibold text-gray-900">Content Outline</h2>
                  <Button
