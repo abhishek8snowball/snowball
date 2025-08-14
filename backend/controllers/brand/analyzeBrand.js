@@ -77,8 +77,22 @@ exports.analyzeBrand = async (req, res) => {
 
     // 5. Run prompts and save responses
     console.log("🤖 Step 5: Running prompts...");
-    const aiResponses = await runPromptsAndSaveResponses(openai, categoryPrompts);
+    const aiResponses = await runPromptsAndSaveResponses(openai, categoryPrompts, brand._id, userId);
     console.log("✅ AI responses generated:", aiResponses.length, "responses");
+
+    // 5.5. Extract company mentions from AI responses
+    console.log("🔍 Step 5.5: Extracting company mentions from AI responses...");
+    try {
+      const MentionExtractor = require('./mentionExtractor');
+      const mentionExtractor = new MentionExtractor();
+      
+      // Process all responses for this brand to extract mentions
+      const totalMentions = await mentionExtractor.processBrandResponses(brand._id, userId);
+      console.log("✅ Company mentions extracted:", totalMentions, "mentions");
+    } catch (mentionError) {
+      console.error("⚠️ Company mention extraction failed:", mentionError.message);
+      // Continue without mention extraction - analysis is still valid
+    }
 
     // 6. Extract competitors
     console.log("🏆 Step 6: Extracting competitors...");

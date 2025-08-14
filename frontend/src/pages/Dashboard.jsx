@@ -7,6 +7,7 @@ import DomainAnalysis from './DomainAnalysis';
 import BlogAnalysis from './BlogAnalysis';
 import ContentCalendarView from './ContentCalendarView';
 import BrandSettings from '../components/BrandSettings';
+
 import { apiService } from '../utils/api';
 import { getUserName } from '../utils/auth';
 import { 
@@ -18,7 +19,8 @@ import {
   Link as LinkIcon,
   Activity,
   ArrowLeft,
-  Calendar
+  Calendar,
+  Building2
 } from 'lucide-react';
 
 const Dashboard = () => {
@@ -30,6 +32,7 @@ const Dashboard = () => {
   const [userName, setUserName] = useState(getUserName());
   const [isLoadingContentCalendar, setIsLoadingContentCalendar] = useState(false);
   const [shouldAutoLoadContent, setShouldAutoLoadContent] = useState(false);
+  const [userBrands, setUserBrands] = useState([]);
 
   // Handle navigation state from blog editor
   useEffect(() => {
@@ -45,6 +48,20 @@ const Dashboard = () => {
       }, 800);
     }
   }, [location.state]);
+
+  // Fetch user's brands
+  useEffect(() => {
+    const fetchUserBrands = async () => {
+      try {
+        const response = await apiService.getUserBrands();
+        setUserBrands(response.data.brands || []);
+      } catch (error) {
+        console.error('Error fetching user brands:', error);
+      }
+    };
+    
+    fetchUserBrands();
+  }, []);
 
   // Reset auto-load flag when manually clicking content calendar
   const handleContentCalendarClick = () => {
@@ -162,6 +179,7 @@ const Dashboard = () => {
         </div>
       );
     }
+
     return null;
   };
 
@@ -377,6 +395,8 @@ const Dashboard = () => {
                         </p>
                       </CardContent>
                     </Card>
+
+
                   </div>
 
                   {/* Analyze Link Form */}

@@ -4,7 +4,7 @@ const TokenCostLogger = require("../../utils/tokenCostLogger");
 // Initialize token logger
 const tokenLogger = new TokenCostLogger();
 
-exports.runPromptsAndSaveResponses = async (openai, prompts) => {
+exports.runPromptsAndSaveResponses = async (openai, prompts, brandId, userId) => {
   const aiResponses = [];
   for (const { promptDoc, catDoc } of prompts) {
     console.log("OpenAI running prompt:", promptDoc.promptText);
@@ -32,7 +32,15 @@ IMPORTANT: In your response, make sure to explicitly mention the brand names tha
     
     console.log("OpenAI aiResp:", responseContent);
     const aiText = responseContent;
-    const aiDoc = await PromptAIResponse.create({ promptId: promptDoc._id, responseText: aiText });
+    
+    // Create AI response with brandId and userId for mention tracking
+    const aiDoc = await PromptAIResponse.create({ 
+      promptId: promptDoc._id, 
+      responseText: aiText,
+      brandId: brandId,
+      userId: userId
+    });
+    
     aiResponses.push({ aiDoc, catDoc });
     console.log("PromptAIResponse created:", aiDoc);
   }

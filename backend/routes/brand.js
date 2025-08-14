@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const auth = require("../middleware/auth");
 const brandController = require("../controllers/brand");
+const mentionController = require("../controllers/brand/mentionController");
 
 // Brand analysis endpoints
 router.post("/analyze", auth, brandController.analyzeBrand);
@@ -33,5 +34,13 @@ router.post("/:brandId/trigger-blog-analysis", auth, brandController.triggerBlog
 
 // Create minimal brand profile for blog analysis (without full analysis)
 router.post("/create-minimal-brand", auth, brandController.createMinimalBrand);
+
+// Mention extraction and analysis endpoints
+router.post("/:brandId/mentions/process", auth, mentionController.processBrandMentions);
+router.get("/:brandId/mentions/companies", auth, mentionController.getUniqueCompanies);
+router.get("/:brandId/mentions/stats", auth, mentionController.getMentionStats);
+router.get("/mentions/company/:companyName", auth, mentionController.getCompanyMentions);
+router.get("/mentions/category/:categoryId", auth, mentionController.getMentionsByCategory);
+router.get("/mentions/search", auth, mentionController.searchMentions);
 
 module.exports = router;

@@ -512,7 +512,7 @@ const DomainAnalysis = ({ onClose, initialDomain = "" }) => {
           {/* Competitors Analysis - Full Width */}
           {result.competitors && (
             <div className="mt-6">
-              <CompetitorsAnalysis competitors={result.competitors} />
+                              <CompetitorsAnalysis competitors={result.competitors} brandId={result.brandId} />
             </div>
           )}
 
