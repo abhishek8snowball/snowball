@@ -17,14 +17,67 @@ const CategoriesWithPrompts = ({ categories, brandId }) => {
     categories,
     brandId,
     categoriesLength: categories?.length,
-    categoriesType: typeof categories
+    categoriesType: typeof categories,
+    categoriesIsArray: Array.isArray(categories),
+    firstCategory: categories?.[0] || null,
+    firstCategoryKeys: categories?.[0] ? Object.keys(categories[0]) : null
   });
 
   useEffect(() => {
-    if (categories && categories.length > 0 && brandId) {
-      fetchCategoryPrompts();
+    if (categories && categories.length > 0) {
+      // Check if categories already have prompts data (from backend)
+      const hasPromptsData = categories.some(cat => cat.prompts && Array.isArray(cat.prompts));
+      
+      console.log("🔍 Categories data check:", {
+        hasPromptsData,
+        categoriesWithPrompts: categories.filter(cat => cat.prompts && Array.isArray(cat.prompts)).length,
+        totalCategories: categories.length
+      });
+      
+      if (hasPromptsData) {
+        console.log("✅ Categories already have prompts data from backend, using directly");
+        processCategoriesWithPrompts();
+      } else if (brandId) {
+        console.log("⚠️ Categories don't have prompts data, fetching from API");
+        fetchCategoryPrompts();
+      }
+    } else {
+      console.log("❌ No categories data received");
     }
   }, [categories, brandId]);
+
+  const processCategoriesWithPrompts = () => {
+    console.log("Processing categories with existing prompts data");
+    console.log("Raw categories data:", categories);
+    
+    const promptsMap = {};
+    
+    categories.forEach(category => {
+      console.log(`Processing category:`, {
+        id: category._id,
+        name: category.categoryName,
+        hasPrompts: !!category.prompts,
+        promptsLength: category.prompts?.length || 0,
+        promptsData: category.prompts
+      });
+      
+      if (category.prompts && Array.isArray(category.prompts)) {
+        promptsMap[category._id] = category.prompts;
+        console.log(`Category ${category.categoryName || category._id}: ${category.prompts.length} prompts`);
+        
+        // Log the first prompt structure for debugging
+        if (category.prompts.length > 0) {
+          console.log(`First prompt structure:`, category.prompts[0]);
+        }
+      } else {
+        promptsMap[category._id] = [];
+        console.log(`Category ${category.categoryName || category._id}: No prompts data`);
+      }
+    });
+    
+    console.log('Final prompts map:', promptsMap);
+    setCategoryPrompts(promptsMap);
+  };
 
   const fetchCategoryPrompts = async () => {
     setLoading(true);
@@ -95,7 +148,36 @@ const CategoriesWithPrompts = ({ categories, brandId }) => {
       return;
     }
 
-    // Set loading state for this specific prompt
+    // Check if we already have the response data from the backend
+    let responseContent = '';
+    
+    // Search through all categories to find the prompt with its response
+    for (const category of categories) {
+      if (category.prompts && Array.isArray(category.prompts)) {
+        const prompt = category.prompts.find(p => p._id === promptId);
+        if (prompt && prompt.aiResponse) {
+          console.log(`✅ Found AI response in backend data for prompt: ${promptId}`);
+          
+          // Use the response data that's already available
+          if (prompt.aiResponse.responseText) {
+            responseContent = prompt.aiResponse.responseText;
+          } else if (prompt.aiResponse.message) {
+            responseContent = prompt.aiResponse.message;
+          } else {
+            responseContent = JSON.stringify(prompt.aiResponse, null, 2);
+          }
+          
+          setPromptResponses(prev => ({
+            ...prev,
+            [promptId]: responseContent
+          }));
+          return; // Exit early since we found the data
+        }
+      }
+    }
+    
+    // If we don't have the response data, fall back to API call
+    console.log(`⚠️ AI response not found in backend data, fetching from API for prompt: ${promptId}`);
     setLoadingResponses(prev => ({ ...prev, [promptId]: true }));
 
     try {
@@ -112,7 +194,6 @@ const CategoriesWithPrompts = ({ categories, brandId }) => {
       });
       
       // Handle the simplified response structure
-      let responseContent = '';
       if (response.data && response.data.success && response.data.responseText) {
         // Backend now returns clean structure with responseText
         responseContent = response.data.responseText;

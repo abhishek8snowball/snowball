@@ -28,4 +28,18 @@ BrandProfileSchema.pre('save', function(next) {
   next();
 });
 
+// Add unique compound index to ensure only one brand per user
+BrandProfileSchema.index({ ownerUserId: 1 }, { unique: true });
+
+// Add validation to prevent multiple brands per user
+BrandProfileSchema.pre('save', async function(next) {
+  if (this.isNew) {
+    const existingBrand = await this.constructor.findOne({ ownerUserId: this.ownerUserId });
+    if (existingBrand) {
+      return next(new Error('User already has a brand profile. Only one brand per user is allowed.'));
+    }
+  }
+  next();
+});
+
 module.exports = mongoose.model("BrandProfile", BrandProfileSchema);

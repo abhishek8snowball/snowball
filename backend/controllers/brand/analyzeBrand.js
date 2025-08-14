@@ -8,7 +8,7 @@ const BrandCategory = require("../../models/BrandCategory");
 const CategorySearchPrompt = require("../../models/CategorySearchPrompt");
 const PromptAIResponse = require("../../models/PromptAIResponse");
 
-const { findOrCreateBrandProfile } = require("./brandProfile");
+const { findOrCreateBrandProfile, canUserAnalyzeDomain } = require("./brandProfile");
 const { extractCategories, saveCategories } = require("./category");
 const { generateAndSavePrompts } = require("./prompt");
 const { runPromptsAndSaveResponses } = require("./aiResponse");
@@ -31,11 +31,22 @@ exports.analyzeBrand = async (req, res) => {
 
   if (!domain) return res.status(400).json({ msg: "Domain is required" });
 
-  // Log analysis session start
-  tokenLogger.logAnalysisStart(domain, brandName || domain);
-  const analysisStartTime = Date.now();
-
   try {
+    // Pre-validate domain analysis
+    const domainValidation = await canUserAnalyzeDomain(userId, domain);
+    console.log("🔍 Domain validation:", domainValidation);
+    
+    if (!domainValidation.canAnalyze) {
+      return res.status(400).json({ 
+        error: "Domain analysis not allowed", 
+        message: domainValidation.message 
+      });
+    }
+
+    // Log analysis session start
+    tokenLogger.logAnalysisStart(domain, brandName || domain);
+    const analysisStartTime = Date.now();
+
     // 1. Create or find brand profile
     console.log("📝 Step 1: Creating/finding brand profile...");
     const brand = await findOrCreateBrandProfile({ domain, brandName, userId });
@@ -138,8 +149,12 @@ exports.analyzeBrand = async (req, res) => {
       totalMentions: sovResult.totalMentions
     });
 
-    // Return success response
-    res.json({
+    // Calculate total duration
+    const totalAnalysisTime = Date.now() - analysisStartTime;
+    console.log(`⏱️ Total analysis time: ${totalAnalysisTime}ms`);
+
+    // Prepare response with domain status information
+    const responseData = {
       success: true,
       msg: "Brand analysis completed successfully",
       brand: brand.brandName,
@@ -155,8 +170,20 @@ exports.analyzeBrand = async (req, res) => {
       brandShare: sovResult.brandShare,
       aiVisibilityScore: sovResult.aiVisibilityScore,
       analysisDate: brandAnalysis.analysisDate,
-      duration: totalDuration
-    });
+      duration: totalAnalysisTime
+    };
+
+    // Add domain status information
+    if (domainValidation.warning) {
+      responseData.warning = domainValidation.warning;
+      responseData.domainStatus = "switched";
+    } else if (domainValidation.message === "Re-analyzing existing domain") {
+      responseData.domainStatus = "re-analyzed";
+    } else {
+      responseData.domainStatus = "first-time";
+    }
+
+    res.json(responseData);
 
   } catch (error) {
     console.error("=== 💥 Analysis Error ===");
@@ -214,13 +241,260 @@ exports.getBrandAnalysis = async (req, res) => {
       analysisDate: latestAnalysis.analysisDate
     });
 
+    // Populate categories with full data instead of just ObjectIDs
+    let populatedCategories = [];
+    if (latestAnalysis.categories && latestAnalysis.categories.length > 0) {
+      try {
+        const BrandCategory = require("../../models/BrandCategory");
+        populatedCategories = await BrandCategory.find({
+          _id: { $in: latestAnalysis.categories }
+        }).lean();
+        
+        console.log(`✅ Populated ${populatedCategories.length} categories with full data`);
+      } catch (categoryError) {
+        console.error("⚠️ Error populating categories:", categoryError.message);
+        // Fallback to empty categories if population fails
+        populatedCategories = [];
+      }
+    }
+
+    // Fetch category prompts and responses for each category
+    let categoriesWithPrompts = [];
+    if (populatedCategories.length > 0) {
+      try {
+        const CategorySearchPrompt = require("../../models/CategorySearchPrompt");
+        const PromptAIResponse = require("../../models/PromptAIResponse");
+        
+        // Debug: Check what prompts exist in the database
+        console.log(`🔍 Debug: Checking database for prompts...`);
+        const allPrompts = await CategorySearchPrompt.find({}).lean();
+        console.log(`📊 Total prompts in database: ${allPrompts.length}`);
+        if (allPrompts.length > 0) {
+          console.log(`📝 Sample prompt structure:`, {
+            id: allPrompts[0]._id,
+            categoryId: allPrompts[0].categoryId,
+            brandId: allPrompts[0].brandId,
+            promptText: allPrompts[0].promptText?.substring(0, 100) + '...'
+          });
+        }
+        
+        // Debug: Check prompts for this specific brand
+        const brandPrompts = await CategorySearchPrompt.find({ brandId: brand._id }).lean();
+        console.log(`🏢 Prompts for brand ${brand.brandName} (${brand._id}): ${brandPrompts.length}`);
+        
+        // Debug: Check if there's a mismatch in brand ID
+        console.log(`🔍 Brand ID comparison:`, {
+          brandIdFromBrand: brand._id,
+          brandIdFromLatestAnalysis: latestAnalysis.brandId,
+          areEqual: brand._id.toString() === latestAnalysis.brandId.toString(),
+          brandIdType: typeof brand._id,
+          latestAnalysisBrandIdType: typeof latestAnalysis.brandId
+        });
+        
+        for (const category of populatedCategories) {
+          console.log(`🔍 Processing category: ${category.categoryName} (${category._id})`);
+          
+          // Get prompts for this category - try multiple approaches
+          let prompts = [];
+          
+          // First, try to find prompts with both categoryId and brandId
+          prompts = await CategorySearchPrompt.find({
+            categoryId: category._id,
+            brandId: brand._id
+          }).lean();
+          
+          console.log(`📝 Found ${prompts.length} prompts with brandId for category ${category.categoryName}`);
+          
+          // If no prompts found, try to find prompts with just categoryId (for legacy data)
+          if (prompts.length === 0) {
+            console.log(`🔍 No prompts with brandId found, checking for legacy prompts without brandId...`);
+            const legacyPrompts = await CategorySearchPrompt.find({
+              categoryId: category._id,
+              brandId: { $exists: false }
+            }).lean();
+            
+            console.log(`📝 Found ${legacyPrompts.length} legacy prompts without brandId for category ${category.categoryName}`);
+            
+            if (legacyPrompts.length > 0) {
+              // Update these legacy prompts to include the brandId
+              console.log(`🔄 Updating ${legacyPrompts.length} legacy prompts with brandId: ${brand._id}`);
+              console.log(`📝 Legacy prompt IDs to update:`, legacyPrompts.map(p => p._id));
+              
+              try {
+                const updateResult = await CategorySearchPrompt.updateMany(
+                  { _id: { $in: legacyPrompts.map(p => p._id) } },
+                  { $set: { brandId: brand._id } }
+                );
+                console.log(`✅ Update result:`, {
+                  matchedCount: updateResult.matchedCount,
+                  modifiedCount: updateResult.modifiedCount,
+                  upsertedCount: updateResult.upsertedCount
+                });
+                
+                // Verify the update by checking one prompt directly
+                const verifyPrompt = await CategorySearchPrompt.findById(legacyPrompts[0]._id).lean();
+                console.log(`🔍 Verification - First prompt after update:`, {
+                  id: verifyPrompt._id,
+                  categoryId: verifyPrompt.categoryId,
+                  brandId: verifyPrompt.brandId,
+                  hasBrandId: !!verifyPrompt.brandId
+                });
+                
+                // Now fetch the updated prompts
+                prompts = await CategorySearchPrompt.find({
+                  categoryId: category._id,
+                  brandId: brand._id
+                }).lean();
+                console.log(`📝 After update: Found ${prompts.length} prompts for category ${category.categoryName}`);
+                
+                // Debug: Check what the query is actually looking for
+                console.log(`🔍 Query debug:`, {
+                  searchingFor: {
+                    categoryId: category._id,
+                    brandId: brand._id
+                  },
+                  categoryIdType: typeof category._id,
+                  brandIdType: typeof brand._id
+                });
+                
+                // Fallback: Check if there are ANY prompts for this category
+                const anyPromptsForCategory = await CategorySearchPrompt.find({
+                  categoryId: category._id
+                }).lean();
+                console.log(`🔍 Fallback check - Any prompts for category ${category.categoryName}:`, {
+                  totalFound: anyPromptsForCategory.length,
+                  samplePrompts: anyPromptsForCategory.slice(0, 3).map(p => ({
+                    id: p._id,
+                    categoryId: p.categoryId,
+                    brandId: p.brandId,
+                    hasBrandId: !!p.brandId
+                  }))
+                });
+                
+              } catch (updateError) {
+                console.error(`❌ Error updating legacy prompts:`, updateError.message);
+                // Use the legacy prompts as-is
+                prompts = legacyPrompts;
+              }
+            }
+            
+            // If still no prompts, try to find by category name (for very legacy data)
+            if (prompts.length === 0) {
+              console.log(`🔍 Still no prompts found, trying to find by category name...`);
+              const nameBasedPrompts = await CategorySearchPrompt.find({
+                categoryName: category.categoryName,
+                brandId: { $exists: false }
+              }).lean();
+              
+              console.log(`📝 Found ${nameBasedPrompts.length} prompts by category name: ${category.categoryName}`);
+              
+              if (nameBasedPrompts.length > 0) {
+                // Update these prompts to include both categoryId and brandId
+                console.log(`🔄 Updating ${nameBasedPrompts.length} name-based prompts with categoryId and brandId`);
+                try {
+                  await CategorySearchPrompt.updateMany(
+                    { _id: { $in: nameBasedPrompts.map(p => p._id) } },
+                    { 
+                      $set: { 
+                        categoryId: category._id,
+                        brandId: brand._id 
+                      } 
+                    }
+                  );
+                  console.log(`✅ Successfully updated name-based prompts`);
+                  
+                  // Now fetch the updated prompts
+                  prompts = await CategorySearchPrompt.find({
+                    categoryId: category._id,
+                    brandId: brand._id
+                  }).lean();
+                  console.log(`📝 After name-based update: Found ${prompts.length} prompts for category ${category.categoryName}`);
+                } catch (updateError) {
+                  console.error(`❌ Error updating name-based prompts:`, updateError.message);
+                  // Use the name-based prompts as-is
+                  prompts = nameBasedPrompts;
+                }
+              }
+            }
+          }
+          
+          console.log(`📝 Final prompts for category ${category.categoryName}:`, {
+            categoryId: category._id,
+            brandId: brand._id,
+            promptsFound: prompts.length,
+            promptIds: prompts.map(p => p._id)
+          });
+          
+          // Get AI responses for each prompt
+          const promptsWithResponses = [];
+          for (const prompt of prompts) {
+            console.log(`🤖 Fetching AI response for prompt: ${prompt._id}`);
+            const aiResponse = await PromptAIResponse.findOne({
+              promptId: prompt._id
+            }).lean();
+            
+            console.log(`✅ AI response for prompt ${prompt._id}:`, {
+              found: !!aiResponse,
+              responseId: aiResponse?._id || null,
+              responseKeys: aiResponse ? Object.keys(aiResponse) : null
+            });
+            
+            promptsWithResponses.push({
+              ...prompt,
+              aiResponse: aiResponse || null
+            });
+          }
+          
+          categoriesWithPrompts.push({
+            ...category,
+            prompts: promptsWithResponses
+          });
+        }
+        
+        console.log(`✅ Fetched prompts and responses for ${categoriesWithPrompts.length} categories`);
+        
+        // Debug: Log the structure of the first category with prompts
+        if (categoriesWithPrompts.length > 0) {
+          const firstCategory = categoriesWithPrompts[0];
+          console.log('🔍 First category structure:', {
+            id: firstCategory._id,
+            name: firstCategory.categoryName,
+            hasPrompts: !!firstCategory.prompts,
+            promptsLength: firstCategory.prompts?.length || 0,
+            firstPrompt: firstCategory.prompts?.[0] || null,
+            firstPromptStructure: firstCategory.prompts?.[0] ? {
+              id: firstCategory.prompts[0]._id,
+              hasAiResponse: !!firstCategory.prompts[0].aiResponse,
+              aiResponseKeys: firstCategory.prompts[0].aiResponse ? Object.keys(firstCategory.prompts[0].aiResponse) : null
+            } : null
+          });
+        }
+      } catch (promptError) {
+        console.error("⚠️ Error fetching category prompts/responses:", promptError.message);
+        // Fallback to categories without prompts if fetch fails
+        categoriesWithPrompts = populatedCategories;
+      }
+    }
+
+    // Debug: Log the final response data structure
+    console.log('🚀 Sending response to frontend with categories:', {
+      categoriesCount: categoriesWithPrompts.length,
+      categoriesStructure: categoriesWithPrompts.map(cat => ({
+        id: cat._id,
+        name: cat.categoryName,
+        promptsCount: cat.prompts?.length || 0,
+        hasPrompts: !!cat.prompts
+      })),
+      firstCategoryFull: categoriesWithPrompts[0] || null
+    });
+
     res.json({
       success: true,
       brand: latestAnalysis.brandName,
       domain: latestAnalysis.domain,
       description: latestAnalysis.description || `${latestAnalysis.brandName} provides an AI-powered platform designed for sales teams and sales development representatives (SDRs).`,
       brandId: latestAnalysis.brandId,
-      categories: latestAnalysis.categories || [],
+      categories: categoriesWithPrompts, // Send populated categories with prompts/responses
       competitors: latestAnalysis.competitors || [],
       shareOfVoice: shareOfVoice,
       mentionCounts: mentionCounts,

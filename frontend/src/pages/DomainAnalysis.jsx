@@ -24,6 +24,10 @@ const DomainAnalysis = ({ onClose, initialDomain = "" }) => {
   const [showConsole, setShowConsole] = useState(false);
   // Blog analysis moved to separate page
   const [hasStartedAnalysis, setHasStartedAnalysis] = useState(false);
+  
+  // New state for domain switching
+  const [existingDomain, setExistingDomain] = useState(null);
+  const [showDomainWarning, setShowDomainWarning] = useState(false);
 
   // Check for existing analysis first, then auto-start if needed
   useEffect(() => {
@@ -59,6 +63,18 @@ const DomainAnalysis = ({ onClose, initialDomain = "" }) => {
         try {
           const analysisResponse = await apiService.getBrandAnalysis(existingBrand.id);
           console.log('Existing analysis loaded:', analysisResponse.data);
+          console.log('🔍 Categories data received:', {
+            categories: analysisResponse.data.categories,
+            categoriesLength: analysisResponse.data.categories?.length,
+            categoriesType: typeof analysisResponse.data.categories,
+            firstCategory: analysisResponse.data.categories?.[0] || null,
+            firstCategoryStructure: analysisResponse.data.categories?.[0] ? {
+              id: analysisResponse.data.categories[0]._id,
+              name: analysisResponse.data.categories[0].categoryName,
+              hasPrompts: !!analysisResponse.data.categories[0].prompts,
+              promptsLength: analysisResponse.data.categories[0].prompts?.length || 0
+            } : null
+          });
           setResult(analysisResponse.data);
           setCurrentStep("Analysis loaded!");
           toast.success("Existing analysis loaded successfully!");
@@ -77,6 +93,43 @@ const DomainAnalysis = ({ onClose, initialDomain = "" }) => {
       handleAnalyzeWithDomain(domainToCheck);
     }
   };
+
+  // Check for domain switching when domain input changes
+  useEffect(() => {
+    const checkDomainSwitch = async () => {
+      if (domain && domain.trim()) {
+        try {
+          const brandsResponse = await apiService.getUserBrands();
+          const userBrands = brandsResponse.data.brands || [];
+          
+          if (userBrands.length > 0) {
+            const currentBrand = userBrands[0]; // Get the user's current brand
+            const isDifferentDomain = currentBrand.domain !== domain && 
+                                    currentBrand.domain.replace(/^https?:\/\//, '') !== domain &&
+                                    currentBrand.domain !== `https://${domain}` &&
+                                    currentBrand.domain !== `http://${domain}`;
+            
+            if (isDifferentDomain) {
+              setExistingDomain(currentBrand.domain);
+              setShowDomainWarning(true);
+            } else {
+              setShowDomainWarning(false);
+              setExistingDomain(null);
+            }
+          }
+        } catch (error) {
+          console.log('Error checking domain switch:', error);
+        }
+      } else {
+        setShowDomainWarning(false);
+        setExistingDomain(null);
+      }
+    };
+    
+    // Debounce the check to avoid too many API calls
+    const timeoutId = setTimeout(checkDomainSwitch, 500);
+    return () => clearTimeout(timeoutId);
+  }, [domain]);
 
   // Debug logging using useEffect
   useEffect(() => {
@@ -149,7 +202,15 @@ const DomainAnalysis = ({ onClose, initialDomain = "" }) => {
       console.log('Domain analysis completed:', response.data);
       setResult(response.data);
       setCurrentStep("Analysis complete!");
-      toast.success("Domain analysis completed successfully!");
+      
+      // Show appropriate success message based on domain status
+      if (response.data.warning) {
+        toast.warning(`Domain switched successfully! ${response.data.warning}`);
+      } else if (response.data.domainStatus === 're-analyzed') {
+        toast.success("Domain re-analyzed successfully!");
+      } else {
+        toast.success("Domain analysis completed successfully!");
+      }
     } catch (error) {
       console.error('Domain analysis error:', error);
       
@@ -173,8 +234,68 @@ const DomainAnalysis = ({ onClose, initialDomain = "" }) => {
   };
 
   const handleAnalyze = async (e) => {
+    console.log('🎯 handleAnalyze called!', { e, domain });
     e.preventDefault();
-    await handleAnalyzeWithDomain(domain);
+    
+    // First check if we have existing analysis for this domain
+    try {
+      console.log('Checking for existing analysis before starting new one...');
+      
+      // Get user's existing brands
+      const brandsResponse = await apiService.getUserBrands();
+      const userBrands = brandsResponse.data.brands || [];
+      
+      // Look for existing brand with this domain
+      const existingBrand = userBrands.find(brand => 
+        brand.domain === domain || 
+        brand.domain.replace(/^https?:\/\//, '') === domain ||
+        brand.domain === `https://${domain}` ||
+        brand.domain === `http://${domain}`
+      );
+      
+      if (existingBrand) {
+        console.log('Found existing brand, offering to load existing data:', existingBrand);
+        
+        // Show confirmation dialog to user
+        const shouldLoadExisting = window.confirm(
+          `Domain "${domain}" has already been analyzed.\n\n` +
+          `Would you like to:\n` +
+          `• Load existing analysis (instant) - Click OK\n` +
+          `• Run new analysis (2-5 minutes) - Click Cancel`
+        );
+        
+        if (shouldLoadExisting) {
+          // Load existing analysis
+          setLoading(true);
+          setCurrentStep("Loading existing analysis...");
+          
+          try {
+            const analysisResponse = await apiService.getBrandAnalysis(existingBrand.id);
+            console.log('Existing analysis loaded:', analysisResponse.data);
+            setResult(analysisResponse.data);
+            setCurrentStep("Analysis loaded!");
+            toast.success("Existing analysis loaded successfully!");
+          } catch (analysisError) {
+            console.log('Error loading existing analysis, starting new analysis:', analysisError);
+            toast.error("Failed to load existing analysis, starting new analysis...");
+            await handleAnalyzeWithDomain(domain);
+          } finally {
+            setLoading(false);
+          }
+        } else {
+          // User chose to run new analysis
+          console.log('User chose to run new analysis for existing domain');
+          await handleAnalyzeWithDomain(domain);
+        }
+      } else {
+        // No existing brand found, start new analysis
+        console.log('No existing brand found, starting new analysis...');
+        await handleAnalyzeWithDomain(domain);
+      }
+    } catch (error) {
+      console.log('Error checking existing analysis, starting new analysis:', error);
+      await handleAnalyzeWithDomain(domain);
+    }
   };
 
   const handleClose = () => {
@@ -207,6 +328,8 @@ const DomainAnalysis = ({ onClose, initialDomain = "" }) => {
           loading={loading}
           onSubmit={handleAnalyze}
           onClose={handleClose}
+          existingDomain={existingDomain}
+          showDomainWarning={showDomainWarning}
         />
       )}
 
@@ -396,6 +519,12 @@ const DomainAnalysis = ({ onClose, initialDomain = "" }) => {
           {/* Categories with Prompts - Full Width */}
           {result.categories && Array.isArray(result.categories) && result.categories.length > 0 && (
             <div className="mt-6">
+              {console.log('🎯 Rendering CategoriesWithPrompts with:', {
+                categories: result.categories,
+                brandId: result.brandId,
+                categoriesLength: result.categories.length,
+                firstCategory: result.categories[0]
+              })}
               <CategoriesWithPrompts 
                 categories={result.categories} 
                 brandId={result.brandId} 
