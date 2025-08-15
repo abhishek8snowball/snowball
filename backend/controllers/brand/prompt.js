@@ -91,6 +91,7 @@ Popular competitors include: ${competitorList.join(', ')}.
 Generate 5 natural, conversational questions that users typically ask ChatGPT about these keywords. These questions should be framed so that responses would naturally mention ${brand.brandName} but it should not mention explicitly or showing biasness towrads ${brand.brandName} , also same goes for competitors.
 
 Guidelines:
+- prompt should not mention ${brand.brandName}.
 - Use the provided keywords as inspiration for question topics
 - Use natural, conversational phrasing reflecting genuine user curiosity (e.g., "What are the best…", "Which platforms…", "How do I choose…").
 - Cover themes like comparisons, alternatives, recommendations, trending tools, and value-for-money.

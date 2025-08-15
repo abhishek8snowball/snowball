@@ -4,10 +4,11 @@ const TokenCostLogger = require("../../utils/tokenCostLogger");
 // Initialize token logger
 const tokenLogger = new TokenCostLogger();
 
-exports.runPromptsAndSaveResponses = async (openai, prompts, brandId, userId) => {
+exports.runPromptsAndSaveResponses = async (openai, prompts, brandId, userId, analysisSessionId) => {
   const aiResponses = [];
   for (const { promptDoc, catDoc } of prompts) {
     console.log("OpenAI running prompt:", promptDoc.promptText);
+    console.log(`🆔 Using analysis session ID: ${analysisSessionId}`);
     
     // Enhance the prompt to ensure brand names are mentioned in the response
     const enhancedPrompt = `${promptDoc.promptText}
@@ -38,7 +39,8 @@ IMPORTANT: In your response, make sure to explicitly mention the brand names tha
       promptId: promptDoc._id, 
       responseText: aiText,
       brandId: brandId,
-      userId: userId
+      userId: userId,
+      analysisSessionId: analysisSessionId // ✅ Add analysis session ID
     });
     
     aiResponses.push({ aiDoc, catDoc });

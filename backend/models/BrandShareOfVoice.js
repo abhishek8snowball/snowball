@@ -4,6 +4,7 @@ const BrandShareOfVoiceSchema = new mongoose.Schema({
   brandId: { type: mongoose.Schema.Types.ObjectId, ref: "BrandProfile", required: true },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   categoryId: { type: mongoose.Schema.Types.ObjectId, ref: "BrandCategory", required: false }, // Made optional
+  analysisSessionId: { type: String, required: false, index: true }, // Made optional temporarily
   domain: { type: String, required: true },
   brandName: { type: String, required: true },
   description: { type: String, required: false },
@@ -52,5 +53,8 @@ const BrandShareOfVoiceSchema = new mongoose.Schema({
   }],
   calculatedAt: { type: Date, default: Date.now }
 });
+
+// Add compound index for efficient querying by analysis session
+BrandShareOfVoiceSchema.index({ userId: 1, analysisSessionId: 1 });
 
 module.exports = mongoose.model("BrandShareOfVoice", BrandShareOfVoiceSchema);

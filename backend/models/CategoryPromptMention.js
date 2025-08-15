@@ -35,6 +35,11 @@ const categoryPromptMentionSchema = new mongoose.Schema({
     required: true,
     index: true
   },
+  analysisSessionId: {
+    type: String,
+    required: false,  // Made optional temporarily
+    index: true
+  },
   mentionContext: {
     type: String,
     required: false,
@@ -58,5 +63,6 @@ const categoryPromptMentionSchema = new mongoose.Schema({
 categoryPromptMentionSchema.index({ companyName: 1, brandId: 1 });
 categoryPromptMentionSchema.index({ categoryId: 1, promptId: 1 });
 categoryPromptMentionSchema.index({ userId: 1, companyName: 1 });
+categoryPromptMentionSchema.index({ userId: 1, analysisSessionId: 1 });
 
 module.exports = mongoose.model('CategoryPromptMention', categoryPromptMentionSchema);

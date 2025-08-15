@@ -12,7 +12,8 @@ const ShareOfVoiceTable = ({
   brandShare,
   aiVisibilityScore,
   brandId,
-  brandName
+  brandName,
+  calculationMethod: propCalculationMethod
 }) => {
   const [selectedBrand, setSelectedBrand] = useState(null);
   const [mentionData, setMentionData] = useState(null);
@@ -26,7 +27,8 @@ const ShareOfVoiceTable = ({
     brandShare,
     aiVisibilityScore,
     brandId,
-    brandName
+    brandName,
+    calculationMethod: propCalculationMethod
   });
 
   // Function to fetch mention data for a brand
@@ -91,6 +93,7 @@ const ShareOfVoiceTable = ({
   let totalMentionsCount = 0;
   let brandsCount = 0;
   let isUsingFallback = false;
+  let calculationMethod = propCalculationMethod || 'unknown';
 
   // Check if data is in the new enhanced format
   if (shareOfVoice && mentionCounts) {
@@ -265,32 +268,39 @@ const ShareOfVoiceTable = ({
             </CardContent>
           </Card>
 
-          {/* Data Quality Indicator */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-foreground mb-1">Data Quality</p>
-                  <p className="text-xs text-muted-foreground">
-                    {isUsingFallback 
-                      ? "Based on estimated market distribution" 
-                      : "Based on actual mention analysis"
-                    }
-                  </p>
-                </div>
-                <Badge
-                  variant={isUsingFallback ? "outline" : "default"}
-                  className={`text-xs ${
-                    isUsingFallback 
-                      ? 'bg-yellow-100 text-yellow-800 border-yellow-200' 
-                      : 'bg-green-100 text-green-800 border-green-200'
-                  }`}
-                >
-                  {isUsingFallback ? 'Estimated' : 'Real Data'}
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
+                     {/* Data Quality Indicator */}
+           <Card>
+             <CardContent className="p-4">
+               <div className="flex items-center justify-between">
+                 <div>
+                   <p className="text-sm font-medium text-foreground mb-1">Data Quality</p>
+                   <p className="text-xs text-muted-foreground">
+                     {isUsingFallback 
+                       ? "Based on estimated market distribution" 
+                       : "Based on actual mention analysis"
+                     }
+                     {calculationMethod !== 'unknown' && (
+                       <span className="block mt-1 text-xs text-blue-600">
+                         Method: {calculationMethod === 'new_simplified_formula' ? 'Entity Extraction Counts' : 
+                                   calculationMethod === 'fallback_distribution' ? 'Fallback Distribution' : 
+                                   calculationMethod}
+                       </span>
+                     )}
+                   </p>
+                 </div>
+                 <Badge
+                   variant={isUsingFallback ? "outline" : "default"}
+                   className={`text-xs ${
+                     isUsingFallback 
+                       ? 'bg-yellow-100 text-yellow-800 border-yellow-200' 
+                       : 'bg-green-100 text-green-800 border-green-200'
+                   }`}
+                 >
+                   {isUsingFallback ? 'Estimated' : 'Real Data'}
+                 </Badge>
+               </div>
+             </CardContent>
+           </Card>
         </CardContent>
       </Card>
 

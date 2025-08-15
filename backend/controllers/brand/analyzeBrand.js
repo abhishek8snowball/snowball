@@ -32,6 +32,10 @@ exports.analyzeBrand = async (req, res) => {
   if (!domain) return res.status(400).json({ msg: "Domain is required" });
 
   try {
+    // ✅ Generate analysis session ID for this analysis
+    const analysisSessionId = `analysis_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    console.log(`🆔 Generated analysis session ID: ${analysisSessionId}`);
+
     // Pre-validate domain analysis
     const domainValidation = await canUserAnalyzeDomain(userId, domain);
     console.log("🔍 Domain validation:", domainValidation);
@@ -75,9 +79,9 @@ exports.analyzeBrand = async (req, res) => {
     const categoryPrompts = await generateAndSavePrompts(openai, catDocs, brand, []);
     console.log("✅ Prompts generated:", categoryPrompts.length, "prompts");
 
-    // 5. Run prompts and save responses
-    console.log("🤖 Step 5: Running prompts...");
-    const aiResponses = await runPromptsAndSaveResponses(openai, categoryPrompts, brand._id, userId);
+    // 5. Generate AI responses for each prompt
+    console.log("🤖 Step 5: Generating AI responses for each prompt...");
+    const aiResponses = await runPromptsAndSaveResponses(openai, categoryPrompts, brand._id, userId, analysisSessionId);
     console.log("✅ AI responses generated:", aiResponses.length, "responses");
 
     // 5.5. Extract company mentions from AI responses
@@ -87,8 +91,28 @@ exports.analyzeBrand = async (req, res) => {
       const mentionExtractor = new MentionExtractor();
       
       // Process all responses for this brand to extract mentions
-      const totalMentions = await mentionExtractor.processBrandResponses(brand._id, userId);
+      const totalMentions = await mentionExtractor.processBrandResponses(brand._id, userId, analysisSessionId);
       console.log("✅ Company mentions extracted:", totalMentions, "mentions");
+      
+      // ✅ IMPORTANT: Add delay and verify mentions were created with analysisSessionId
+      console.log("⏳ Waiting for database consistency...");
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Verify mentions were created with analysisSessionId
+      const CategoryPromptMention = require('../../models/CategoryPromptMention');
+      const mentionsWithSession = await CategoryPromptMention.find({
+        analysisSessionId: analysisSessionId
+      });
+      
+      console.log(`🔍 Verification: Found ${mentionsWithSession.length} mentions with analysisSessionId: ${analysisSessionId}`);
+      
+      if (mentionsWithSession.length === 0) {
+        console.log("⚠️ WARNING: No mentions found with current analysisSessionId!");
+        console.log("⚠️ This will cause SOV calculation to fall back to old data");
+      } else {
+        console.log("✅ Mentions verified with analysisSessionId - SOV calculation should work correctly");
+      }
+      
     } catch (mentionError) {
       console.error("⚠️ Company mention extraction failed:", mentionError.message);
       // Continue without mention extraction - analysis is still valid
@@ -101,7 +125,7 @@ exports.analyzeBrand = async (req, res) => {
 
     // 7. Calculate share of voice
     console.log("📊 Step 7: Calculating share of voice...");
-    const sovResult = await calculateShareOfVoice(brand, competitors, aiResponses, catDocs[0]?._id);
+    const sovResult = await calculateShareOfVoice(brand, competitors, aiResponses, catDocs[0]?._id, analysisSessionId);
     console.log("✅ Share of voice calculated");
 
     // 8. Generate brand description
@@ -137,6 +161,7 @@ exports.analyzeBrand = async (req, res) => {
       totalMentions: sovResult.totalMentions,
       brandShare: sovResult.brandShare,
       aiVisibilityScore: sovResult.aiVisibilityScore,
+      analysisSessionId: analysisSessionId, // ✅ Add analysis session ID
       analysisDate: new Date(),
       duration: Math.round((Date.now() - analysisStartTime) / 1000),
       // Add missing fields for schema compatibility

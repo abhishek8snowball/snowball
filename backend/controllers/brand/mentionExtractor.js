@@ -21,9 +21,10 @@ Text:
   /**
    * Extract company mentions from a single AI response
    */
-  async extractMentionsFromResponse(responseText, promptId, categoryId, brandId, userId, responseId) {
+  async extractMentionsFromResponse(responseText, promptId, categoryId, brandId, userId, responseId, analysisSessionId) {
     try {
       console.log(`🔍 Extracting mentions from response for prompt: ${promptId}`);
+      console.log(`🆔 Using analysis session ID: ${analysisSessionId}`);
       
       // Prepare the extraction prompt
       const prompt = this.extractionPrompt.replace('{RESPONSE_TEXT}', responseText);
@@ -65,6 +66,8 @@ Text:
       const mentions = [];
       for (const companyName of companies) {
         if (companyName && typeof companyName === 'string' && companyName.trim()) {
+          console.log(`💾 Creating mention for: ${companyName.trim()} with analysisSessionId: ${analysisSessionId}`);
+          
           const mention = await CategoryPromptMention.create({
             categoryId,
             promptId,
@@ -72,8 +75,17 @@ Text:
             responseId: responseId,
             brandId,
             userId,
+            analysisSessionId, // ✅ Add analysis session ID
             confidence: 1.0
           });
+          
+          console.log(`✅ Mention created:`, {
+            id: mention._id,
+            companyName: mention.companyName,
+            analysisSessionId: mention.analysisSessionId,
+            categoryId: mention.categoryId
+          });
+          
           mentions.push(mention);
         }
       }
@@ -119,9 +131,10 @@ Text:
   /**
    * Process all unprocessed AI responses for a specific brand
    */
-  async processBrandResponses(brandId, userId) {
+  async processBrandResponses(brandId, userId, analysisSessionId) {
     try {
       console.log(`🔄 Processing brand responses for brand: ${brandId}`);
+      console.log(`🆔 Using analysis session ID: ${analysisSessionId}`);
       
       // Get all unprocessed responses for this brand
       // First, try to find responses that have brandId set directly
@@ -185,7 +198,8 @@ Text:
             categoryId,
             brandId,
             userId,
-            responseId
+            responseId,
+            analysisSessionId // ✅ Pass analysis session ID
           );
 
           // Update the response to mark it as processed
