@@ -86,6 +86,18 @@ exports.analyzeBrand = async (req, res) => {
 
     // 5.5. Extract company mentions from AI responses
     console.log("🔍 Step 5.5: Extracting company mentions from AI responses...");
+    
+    // ✅ IMPORTANT: Clear previous mentions for this user before new analysis
+    console.log("🧹 Clearing previous mentions for user:", userId);
+    try {
+      const CategoryPromptMention = require('../../models/CategoryPromptMention');
+      const deleteResult = await CategoryPromptMention.deleteMany({ userId: userId });
+      console.log(`✅ Cleared ${deleteResult.deletedCount} previous mentions for user: ${userId}`);
+    } catch (cleanupError) {
+      console.error("⚠️ Warning: Failed to clear previous mentions:", cleanupError.message);
+      // Continue with analysis even if cleanup fails
+    }
+    
     try {
       const MentionExtractor = require('./mentionExtractor');
       const mentionExtractor = new MentionExtractor();
