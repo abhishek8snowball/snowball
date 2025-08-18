@@ -1,8 +1,8 @@
 const mongoose = require("mongoose");
 
 const CategorySearchPromptSchema = new mongoose.Schema({
-  categoryId: { type: mongoose.Schema.Types.ObjectId, ref: "BrandCategory", required: true },
-  brandId: { type: mongoose.Schema.Types.ObjectId, ref: "BrandProfile", required: false }, // Added brandId field
+  categoryId: { type: String, required: true }, // Changed from ObjectId to String for Google OAuth compatibility
+  brandId: { type: String, required: false }, // Changed from ObjectId to String for Google OAuth compatibility
   promptText: { type: String, required: true },
   createdAt: { type: Date, default: Date.now }
 });

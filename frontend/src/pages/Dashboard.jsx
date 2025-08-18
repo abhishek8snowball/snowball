@@ -49,18 +49,69 @@ const Dashboard = () => {
     }
   }, [location.state]);
 
+  // Check if user should be on dashboard or redirected to onboarding
+  useEffect(() => {
+    const checkUserStatus = async () => {
+      try {
+        const token = localStorage.getItem('auth');
+        if (!token) {
+          console.log('No auth token found, redirecting to login');
+          window.location.href = '/login';
+          return;
+        }
+
+        // Check onboarding status to see if user has substantial data
+        const response = await fetch('/api/v1/onboarding/status', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          const status = await response.json();
+          console.log('🔍 Dashboard user status check:', status);
+          
+          if (!status.shouldRedirectToDashboard) {
+            console.log('📝 User lacks substantial data, redirecting to onboarding');
+            window.location.href = '/onboarding';
+            return;
+          }
+        }
+      } catch (error) {
+        console.error('Error checking user status:', error);
+        // On error, stay on dashboard (safer default)
+      }
+    };
+
+    checkUserStatus();
+  }, []);
+
   // Fetch user's brands
   useEffect(() => {
     const fetchUserBrands = async () => {
       try {
+        // Check if we have an auth token before making the API call
+        const token = localStorage.getItem('auth');
+        if (!token) {
+          console.log('No auth token found, skipping getUserBrands call');
+          return;
+        }
+        
+        console.log('🔑 Token found, proceeding with getUserBrands call');
         const response = await apiService.getUserBrands();
         setUserBrands(response.data.brands || []);
       } catch (error) {
         console.error('Error fetching user brands:', error);
+        // Don't redirect on error, just log it
       }
     };
     
-    fetchUserBrands();
+    // Add a small delay to ensure token is properly set
+    const timer = setTimeout(() => {
+      fetchUserBrands();
+    }, 100);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   // Reset auto-load flag when manually clicking content calendar

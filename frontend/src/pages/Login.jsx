@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Eye, EyeOff } from 'lucide-react';
 import { apiService } from '../utils/api';
 import { toast } from 'react-toastify';
+import GoogleSignIn from '../components/GoogleSignIn';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -137,6 +138,19 @@ const Login = () => {
             </form>
           </CardContent>
         </Card>
+
+        {/* Divider */}
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-300" />
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 bg-white text-gray-500">Or continue with</span>
+          </div>
+        </div>
+
+        {/* Google Sign-In Button */}
+        <GoogleSignIn />
 
         {/* Back Link */}
         <div className="text-center">

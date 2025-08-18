@@ -1,16 +1,16 @@
 const mongoose = require("mongoose");
 
 const BrandShareOfVoiceSchema = new mongoose.Schema({
-  brandId: { type: mongoose.Schema.Types.ObjectId, ref: "BrandProfile", required: true },
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-  categoryId: { type: mongoose.Schema.Types.ObjectId, ref: "BrandCategory", required: false }, // Made optional
+  brandId: { type: String, required: true }, // Changed from ObjectId to String for Google OAuth compatibility
+  userId: { type: String, required: true }, // Changed from ObjectId to String for Google OAuth compatibility
+  categoryId: { type: String, required: false }, // Changed from ObjectId to String for Google OAuth compatibility
   analysisSessionId: { type: String, required: false, index: true }, // Made optional temporarily
   domain: { type: String, required: true },
   brandName: { type: String, required: true },
   description: { type: String, required: false },
-  categories: [{ type: mongoose.Schema.Types.ObjectId, ref: "BrandCategory" }],
-  categoryPrompts: [{ type: mongoose.Schema.Types.ObjectId, ref: "CategorySearchPrompt" }],
-  aiResponses: [{ type: mongoose.Schema.Types.ObjectId, ref: "PromptAIResponse" }],
+  categories: [{ type: String }], // Changed from ObjectId to String for Google OAuth compatibility
+  categoryPrompts: [{ type: String }], // Changed from ObjectId to String for Google OAuth compatibility
+  aiResponses: [{ type: String }], // Changed from ObjectId to String for Google OAuth compatibility
   competitors: [String],
   analysisDate: { type: Date, default: Date.now },
   duration: { type: Number, default: 0 },

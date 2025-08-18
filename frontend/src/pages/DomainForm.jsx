@@ -7,6 +7,40 @@ const DomainForm = ({ domain, setDomain, loading, onSubmit, onClose, existingDom
   const [hasExistingData, setHasExistingData] = useState(false);
   const [checkingDomain, setCheckingDomain] = useState(false);
 
+  // Function to normalize domain input (accepts any format)
+  const normalizeDomain = (input) => {
+    if (!input) return '';
+    
+    let normalized = input.trim().toLowerCase();
+    
+    // Remove protocol if present
+    normalized = normalized.replace(/^https?:\/\//, '');
+    
+    // Remove www. if present
+    normalized = normalized.replace(/^www\./, '');
+    
+    // Remove trailing slash
+    normalized = normalized.replace(/\/$/, '');
+    
+    // Remove any path after domain
+    normalized = normalized.split('/')[0];
+    
+    // Remove query parameters
+    normalized = normalized.split('?')[0];
+    
+    // Remove hash fragments
+    normalized = normalized.split('#')[0];
+    
+    return normalized;
+  };
+
+  // Handle domain input change with normalization
+  const handleDomainChange = (e) => {
+    const rawInput = e.target.value;
+    const normalized = normalizeDomain(rawInput);
+    setDomain(normalized);
+  };
+
   // Check if domain has existing data
   useEffect(() => {
     const checkExistingData = async () => {
@@ -18,12 +52,11 @@ const DomainForm = ({ domain, setDomain, loading, onSubmit, onClose, existingDom
           const brandsResponse = await apiService.getUserBrands();
           const userBrands = brandsResponse.data.brands || [];
           
-          const existingBrand = userBrands.find(brand => 
-            brand.domain === domain || 
-            brand.domain.replace(/^https?:\/\//, '') === domain ||
-            brand.domain === `https://${domain}` ||
-            brand.domain === `http://${domain}`
-          );
+          const normalizedDomain = normalizeDomain(domain);
+          const existingBrand = userBrands.find(brand => {
+            const brandNormalized = normalizeDomain(brand.domain);
+            return brandNormalized === normalizedDomain;
+          });
           
           setHasExistingData(!!existingBrand);
         } catch (error) {
@@ -92,8 +125,8 @@ const DomainForm = ({ domain, setDomain, loading, onSubmit, onClose, existingDom
               id="domain"
               type="text"
               value={domain}
-              onChange={e => setDomain(e.target.value)}
-              placeholder="Enter brand domain"
+              onChange={handleDomainChange}
+              placeholder="Enter brand domain (e.g., example.com, https://www.example.com, etc.)"
               disabled={loading}
               className="border-[#b0b0d8] focus:border-[#6658f4] focus:ring-[#6658f4]"
             />

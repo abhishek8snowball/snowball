@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 
 const BrandProfileSchema = new mongoose.Schema({
-  ownerUserId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  ownerUserId: { type: String, required: true }, // Changed from ObjectId to String for Google OAuth compatibility
   brandName: { type: String, required: true },
   domain: { type: String, required: true },
   brandTonality: { 

@@ -2,39 +2,34 @@ const mongoose = require('mongoose');
 
 const categoryPromptMentionSchema = new mongoose.Schema({
   categoryId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'BrandCategory',
+    type: String,
     required: true,
     index: true
-  },
+  }, // Changed from ObjectId to String for Google OAuth compatibility
   promptId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'CategorySearchPrompt',
+    type: String,
     required: true,
     index: true
-  },
+  }, // Changed from ObjectId to String for Google OAuth compatibility
   companyName: {
     type: String,
     required: true,
     index: true
   },
   responseId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'PromptAIResponse',
+    type: String,
     required: true
-  },
+  }, // Changed from ObjectId to String for Google OAuth compatibility
   brandId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'BrandProfile',
+    type: String,
     required: true,
     index: true
-  },
+  }, // Changed from ObjectId to String for Google OAuth compatibility
   userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    type: String,
     required: true,
     index: true
-  },
+  }, // Changed from ObjectId to String for Google OAuth compatibility
   analysisSessionId: {
     type: String,
     required: false,  // Made optional temporarily

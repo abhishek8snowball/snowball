@@ -1,8 +1,8 @@
 const mongoose = require("mongoose");
 
 const BrandStrengthScoreSchema = new mongoose.Schema({
-  brandId: { type: mongoose.Schema.Types.ObjectId, ref: "BrandProfile", required: true },
-  categoryId: { type: mongoose.Schema.Types.ObjectId, ref: "BrandCategory", required: true },
+  brandId: { type: String, required: true }, // Changed from ObjectId to String for Google OAuth compatibility
+  categoryId: { type: String, required: true }, // Changed from ObjectId to String for Google OAuth compatibility
   avgDomainAuthority: { type: Number },
   citationCount: { type: Number },
   avgSentiment: { type: Number },

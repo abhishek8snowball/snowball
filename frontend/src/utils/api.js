@@ -22,6 +22,9 @@ api.interceptors.request.use(
     const token = localStorage.getItem('auth') || '';
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('🔑 Token found and added to request:', token.substring(0, 20) + '...');
+    } else {
+      console.log('❌ No auth token found in localStorage');
     }
     console.log('API Request:', config.method?.toUpperCase(), config.url, config.data);
     return config;

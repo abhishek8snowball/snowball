@@ -5,6 +5,8 @@ require('express-async-errors');
 console.log('Environment variables loaded:');
 console.log('MONGO_URI:', process.env.MONGO_URI ? 'Set' : 'NOT SET');
 console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'Set' : 'NOT SET');
+console.log('GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID ? 'Set' : 'NOT SET');
+console.log('GOOGLE_CLIENT_SECRET:', process.env.GOOGLE_CLIENT_SECRET ? 'Set' : 'NOT SET');
 console.log('OPENAI_API_KEY:', process.env.OPENAI_API_KEY ? 'Set' : 'NOT SET');
 console.log('PERPLEXITY_API_KEY:', process.env.PERPLEXITY_API_KEY ? 'Set' : 'NOT SET');
 console.log('SHOPIFY_API_KEY:', process.env.SHOPIFY_API_KEY ? 'Set' : 'NOT SET');
@@ -21,11 +23,19 @@ const brandRouter = require("./routes/brand");
 const contentCalendarRouter = require("./routes/contentCalendar");
 const cmsCredentialsRouter = require("./routes/cmsCredentials");
 const shopifyRouter = require("./routes/shopify");
+const authRouter = require("./routes/auth");
+const onboardingRouter = require("./routes/onboarding");
+
+// Initialize Passport.js
+const passport = require('passport');
 
 // Initialize auto-publisher
 require('./utils/autoPublisher');
 
 app.use(express.json());
+
+// Initialize Passport middleware
+app.use(passport.initialize());
 
 // CORS configuration for development and production
 const allowedOrigins = [
@@ -68,6 +78,8 @@ app.use("/api/v1/brand", brandRouter);
 app.use("/api/v1/content-calendar", contentCalendarRouter);
 app.use("/api/v1/cms-credentials", cmsCredentialsRouter);
 app.use("/api/v1/shopify", shopifyRouter);
+app.use("/api/v1/auth", authRouter);
+app.use("/api/v1/onboarding", onboardingRouter);
 
 // Global error handler
 app.use((err, req, res, next) => {
