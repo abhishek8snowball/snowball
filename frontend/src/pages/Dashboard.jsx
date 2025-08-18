@@ -260,6 +260,14 @@ const Dashboard = () => {
           </button>
 
           <button
+            onClick={() => window.location.href = '/shopify-integration'}
+            className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20"
+          >
+            <Building2 className="w-4 h-4" />
+            <span>Shopify Integration</span>
+          </button>
+
+          <button
             onClick={() => { setActiveSection('history'); setActiveTool(null); }}
             className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
               activeSection === 'history'
@@ -392,6 +400,31 @@ const Dashboard = () => {
                         </div>
                         <p className="text-sm text-[#4a4a6a]">
                           Generate 30-day content plans and auto-publish to your CMS platforms.
+                        </p>
+                      </CardContent>
+                    </Card>
+
+                    {/* Shopify Integration Card */}
+                    <Card 
+                      className="cursor-pointer card-hover border border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out delay-300"
+                      onClick={() => window.location.href = '/shopify-integration'}
+                    >
+                      <CardContent className="p-6">
+                        <div className="flex items-center space-x-4 mb-4">
+                          <div className="w-12 h-12 bg-[#7c77ff] rounded-lg flex items-center justify-center">
+                            <Building2 className="w-6 h-6 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-semibold text-[#000000]">
+                              Shopify Integration
+                            </h3>
+                            <p className="text-sm text-[#4a4a6a]">
+                              OAuth & content publishing
+                            </p>
+                          </div>
+                        </div>
+                        <p className="text-sm text-[#4a4a6a]">
+                          Connect to Shopify stores and publish content directly via OAuth integration.
                         </p>
                       </CardContent>
                     </Card>

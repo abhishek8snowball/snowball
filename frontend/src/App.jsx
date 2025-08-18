@@ -2,6 +2,7 @@ import { RouterProvider, createBrowserRouter } from "react-router-dom";
 import { Dashboard, HomeLayout, Landing, Login, Logout, Register, BlogScoring } from "./pages";
 import History from "./pages/History";
 import BlogEditor from "./pages/BlogEditor";
+import ShopifyIntegration from "./pages/ShopifyIntegration";
 import { ToastContainer, toast } from 'react-toastify';
 import ErrorBoundary from './components/ErrorBoundary';
 
@@ -41,6 +42,10 @@ const router = createBrowserRouter([
       {
         path: "editor/:postId",
         element: <BlogEditor />,
+      },
+      {
+        path: "shopify-integration",
+        element: <ShopifyIntegration />,
       }
     ],
   },

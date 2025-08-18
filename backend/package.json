@@ -9,6 +9,7 @@
     "dev": "nodemon app.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "test-tokens": "node test-token-logging.js",
+    "test-shopify": "node test-shopify-oauth.js",
     "logs": "node view-logs.js",
     "logs-recent": "node view-logs.js recent",
     "logs-file": "node view-logs.js file",

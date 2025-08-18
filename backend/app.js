@@ -7,6 +7,9 @@ console.log('MONGO_URI:', process.env.MONGO_URI ? 'Set' : 'NOT SET');
 console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'Set' : 'NOT SET');
 console.log('OPENAI_API_KEY:', process.env.OPENAI_API_KEY ? 'Set' : 'NOT SET');
 console.log('PERPLEXITY_API_KEY:', process.env.PERPLEXITY_API_KEY ? 'Set' : 'NOT SET');
+console.log('SHOPIFY_API_KEY:', process.env.SHOPIFY_API_KEY ? 'Set' : 'NOT SET');
+console.log('SHOPIFY_API_SECRET:', process.env.SHOPIFY_API_SECRET ? 'Set' : 'NOT SET');
+console.log('APP_URL:', process.env.APP_URL || 'http://localhost:5000 (default)');
 console.log('PORT:', process.env.PORT || '5000 (default)');
 
 const connectDB = require("./db/connect");
@@ -17,6 +20,7 @@ const mainRouter = require("./routes/user");
 const brandRouter = require("./routes/brand");
 const contentCalendarRouter = require("./routes/contentCalendar");
 const cmsCredentialsRouter = require("./routes/cmsCredentials");
+const shopifyRouter = require("./routes/shopify");
 
 // Initialize auto-publisher
 require('./utils/autoPublisher');
@@ -63,6 +67,7 @@ app.use("/api/v1", mainRouter);
 app.use("/api/v1/brand", brandRouter);
 app.use("/api/v1/content-calendar", contentCalendarRouter);
 app.use("/api/v1/cms-credentials", cmsCredentialsRouter);
+app.use("/api/v1/shopify", shopifyRouter);
 
 // Global error handler
 app.use((err, req, res, next) => {
