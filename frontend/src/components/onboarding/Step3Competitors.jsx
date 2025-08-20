@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { apiService } from '../../utils/api';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Building2, Sparkles, Plus, X } from 'lucide-react';
 
 const Step3Competitors = ({ onComplete, loading, error, progress }) => {
@@ -52,104 +51,94 @@ const Step3Competitors = ({ onComplete, loading, error, progress }) => {
   };
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <div className="text-center mb-10">
-        <h2 className="text-2xl font-semibold text-[#4a4a6a] mb-3">
-          List Your Competitors
-        </h2>
-        <p className="text-[#4a4a6a]">
-          We'll analyze your competitors to provide better insights
-        </p>
-      </div>
-
-      <div className="space-y-8">
-        <Card className="border-[#b0b0d8] bg-white">
-          <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Building2 className="w-5 h-5 text-[#7765e3]" />
-                <CardTitle className="text-[#4a4a6a]">Your Competitors</CardTitle>
-              </div>
-              <Button
-                onClick={handleExtractCompetitors}
-                disabled={isExtracting}
-                variant="outline"
-                className="border-[#7765e3] text-[#7765e3] hover:bg-[#7765e3] hover:text-white"
-              >
-                {isExtracting ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-                    Extracting...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    Extract with AI
-                  </>
-                )}
-              </Button>
+    <div className="max-w-lg mx-auto">
+      <div className="space-y-6">
+        {/* Competitors Section */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Building2 className="w-5 h-5 text-primary-500" />
+              <h3 className="text-h4 text-gray-900">Your Competitors</h3>
             </div>
-            <CardDescription className="text-[#4a4a6a]">
-              Add competitor URLs to help us understand your market
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Add Competitor Input */}
-            <div className="flex gap-3">
-              <Input
-                type="text"
-                value={newCompetitor}
-                onChange={(e) => setNewCompetitor(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleAddCompetitor()}
-                placeholder="Enter competitor URL (e.g., competitor.com)"
-                className="h-12 border-[#b0b0d8] focus:border-[#6658f4] focus:ring-[#6658f4]"
-              />
-              <Button
-                onClick={handleAddCompetitor}
-                disabled={!newCompetitor.trim() || competitors.length >= 7}
-                variant="outline"
-                className="h-12 px-4 border-[#b0b0d8]"
-              >
-                <Plus className="w-5 h-5" />
-              </Button>
+            <Button
+              onClick={handleExtractCompetitors}
+              disabled={isExtracting}
+              variant="outline"
+              className="border-primary-500 text-primary-500 hover:bg-primary-500 hover:text-white"
+            >
+              {isExtracting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                  Extracting...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Extract with AI
+                </>
+              )}
+            </Button>
+          </div>
+          
+          <p className="text-base text-gray-600">
+            Add competitor URLs to help us understand your market
+          </p>
+
+          {/* Add Competitor Input */}
+          <div className="flex gap-3">
+            <Input
+              type="text"
+              value={newCompetitor}
+              onChange={(e) => setNewCompetitor(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleAddCompetitor()}
+              placeholder="Enter competitor URL (e.g., competitor.com)"
+              className="h-11 border-gray-300 focus:border-primary-500 focus:ring-primary-500"
+            />
+            <Button
+              onClick={handleAddCompetitor}
+              disabled={!newCompetitor.trim() || competitors.length >= 7}
+              variant="outline"
+              className="h-11 px-4 border-gray-300"
+            >
+              <Plus className="w-4 h-4" />
+            </Button>
+          </div>
+
+          {/* Competitors List */}
+          {competitors.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <Building2 className="w-10 h-10 mx-auto mb-3 text-gray-300" />
+              <p>No competitors added yet</p>
             </div>
+          ) : (
+            <div className="space-y-3">
+              {competitors.map((competitor, index) => (
+                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <span className="text-gray-900 font-medium">{competitor}</span>
+                  <Button
+                    onClick={() => handleRemoveCompetitor(index)}
+                    size="sm"
+                    variant="ghost"
+                    className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
 
-            {/* Competitors List */}
-            {competitors.length === 0 ? (
-              <div className="text-center py-12 text-[#4a4a6a]/70">
-                <Building2 className="w-12 h-12 mx-auto mb-4 text-[#b0b0d8]" />
-                <p>No competitors added yet</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {competitors.map((competitor, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-[#b0b0d8]/30">
-                    <span className="text-[#4a4a6a] font-medium">{competitor}</span>
-                    <Button
-                      onClick={() => handleRemoveCompetitor(index)}
-                      size="sm"
-                      variant="ghost"
-                      className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <p className="text-sm text-[#4a4a6a]/70 text-center">
-              Maximum 7 competitors • {7 - competitors.length} remaining
-            </p>
-          </CardContent>
-        </Card>
+          <p className="text-sm text-gray-500 text-center">
+            Maximum 7 competitors • {7 - competitors.length} remaining
+          </p>
+        </div>
 
         {/* Continue Button */}
         <div className="flex justify-end">
           <Button
             onClick={handleContinue}
             disabled={loading}
-            className="gradient-primary px-8 h-12 min-w-[120px]"
+            className="bg-primary-500 hover:bg-primary-600 text-white px-6 h-11 min-w-[100px]"
           >
             {loading ? 'Processing...' : 'Continue'}
           </Button>

@@ -221,6 +221,7 @@ class OnboardingController {
   async step4Prompts(req, res) {
     try {
       const userId = req.user.id;
+      const { prompts: editedPrompts } = req.body; // Get edited prompts if provided
       
       const brand = await BrandProfile.findOne({ ownerUserId: userId });
       if (!brand) {
@@ -232,22 +233,48 @@ class OnboardingController {
         return res.status(400).json({ error: 'No categories found' });
       }
 
-      console.log(`📝 Step 4: Prompts generation for ${brand.brandName}`);
+      console.log(`📝 Step 4: Prompts for ${brand.brandName}`);
 
-      // Use the existing, more sophisticated prompt generation logic
-      const OpenAI = require('openai');
-      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-      
-      // Import the existing prompt generation function
-      const { generateAndSavePrompts } = require('./brand/prompt');
-      
-      // Generate prompts using the existing logic
-      const prompts = await generateAndSavePrompts(
-        openai, 
-        categories, 
-        brand, 
-        brand.competitors || []
-      );
+      let prompts;
+
+      // If edited prompts are provided, update the existing prompts
+      if (editedPrompts && Array.isArray(editedPrompts) && editedPrompts.length > 0) {
+        console.log(`✏️ Updating prompts with edited versions`);
+        
+        // Get existing prompts from database
+        const existingPrompts = await CategorySearchPrompt.find({ brandId: brand._id });
+        
+        // Update existing prompts with edited text
+        for (let i = 0; i < Math.min(editedPrompts.length, existingPrompts.length); i++) {
+          if (existingPrompts[i] && editedPrompts[i].trim()) {
+            existingPrompts[i].promptText = editedPrompts[i].trim();
+            await existingPrompts[i].save();
+          }
+        }
+        
+        // Return updated prompts with their categories
+        prompts = existingPrompts.map(p => ({
+          promptDoc: p,
+          catDoc: categories.find(c => c._id.toString() === p.categoryId.toString())
+        }));
+      } else {
+        console.log(`🤖 Generating new prompts with AI`);
+        
+        // Use the existing, more sophisticated prompt generation logic
+        const OpenAI = require('openai');
+        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+        
+        // Import the existing prompt generation function
+        const { generateAndSavePrompts } = require('./brand/prompt');
+        
+        // Generate prompts using the existing logic
+        prompts = await generateAndSavePrompts(
+          openai, 
+          categories, 
+          brand, 
+          brand.competitors || []
+        );
+      }
 
       // Save progress
       await OnboardingProgress.findOneAndUpdate(

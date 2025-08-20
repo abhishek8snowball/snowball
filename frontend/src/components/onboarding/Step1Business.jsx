@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { apiService } from '../../utils/api';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Sparkles, Globe } from 'lucide-react';
 
 const Step1Business = ({ onComplete, loading, error, progress }) => {
@@ -60,68 +59,48 @@ const Step1Business = ({ onComplete, loading, error, progress }) => {
   };
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <div className="text-center mb-10">
-        <h2 className="text-2xl font-semibold text-[#4a4a6a] mb-3">
-          Tell us about your business
-        </h2>
-        <p className="text-[#4a4a6a]">
-          We'll analyze your domain and automatically fill in the details
-        </p>
-      </div>
+    <div className="max-w-lg mx-auto">
+      <div className="space-y-6">
+        {/* Domain Input */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Globe className="w-5 h-5 text-primary-500" />
+            <h3 className="text-h4 text-gray-900">Website Domain</h3>
+          </div>
+          <Input
+            type="url"
+            value={domain}
+            onChange={(e) => setDomain(e.target.value)}
+            placeholder="https://example.com"
+            className="h-11 border-gray-300 focus:border-primary-500 focus:ring-primary-500"
+          />
+          
+          <Button
+            onClick={handleAutocompleteWithAI}
+            disabled={isAnalyzing || !domain.trim()}
+            className="w-full bg-primary-500 hover:bg-primary-600 text-white h-11 flex items-center justify-center gap-2"
+          >
+            {isAnalyzing ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                Analyzing...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4" />
+                Autocomplete With AI
+              </>
+            )}
+          </Button>
+        </div>
 
-      <div className="space-y-8">
-        {/* Domain Input Card */}
-        <Card className="border-[#b0b0d8] bg-white">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-[#4a4a6a] flex items-center gap-2">
-              <Globe className="w-5 h-5 text-[#7765e3]" />
-              Website Domain
-            </CardTitle>
-            <CardDescription className="text-[#4a4a6a]">
-              Enter your business website URL
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Input
-              type="url"
-              value={domain}
-              onChange={(e) => setDomain(e.target.value)}
-              placeholder="https://example.com"
-              className="h-12 border-[#b0b0d8] focus:border-[#6658f4] focus:ring-[#6658f4]"
-            />
-            
-            <Button
-              onClick={handleAutocompleteWithAI}
-              disabled={isAnalyzing || !domain.trim()}
-              className="w-full gradient-primary h-12 flex items-center justify-center gap-2"
-            >
-              {isAnalyzing ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  Analyzing...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-5 h-5" />
-                  Autocomplete With AI
-                </>
-              )}
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Business Details Card */}
-        <Card className="border-[#b0b0d8] bg-white">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-[#4a4a6a]">Business Details</CardTitle>
-            <CardDescription className="text-[#4a4a6a]">
-              Review and edit your business information
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-[#4a4a6a]">
+        {/* Business Details */}
+        <div className="space-y-4">
+          <h3 className="text-h4 text-gray-900">Business Details</h3>
+          
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Business Name
               </label>
               <Input
@@ -129,31 +108,31 @@ const Step1Business = ({ onComplete, loading, error, progress }) => {
                 value={brandName}
                 onChange={(e) => setBrandName(e.target.value)}
                 placeholder="Enter business name"
-                className="h-12 border-[#b0b0d8] focus:border-[#6658f4] focus:ring-[#6658f4]"
+                className="h-11 border-gray-300 focus:border-primary-500 focus:ring-primary-500"
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-[#4a4a6a]">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Business Description
               </label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Enter business description"
-                rows={4}
-                className="w-full px-4 py-3 border border-[#b0b0d8] rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#6658f4] focus:border-[#6658f4] text-[#4a4a6a] resize-none"
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 resize-none"
               />
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Continue Button */}
-        <div className="flex justify-end pt-4">
+        <div className="flex justify-end pt-2">
           <Button
             onClick={handleContinue}
             disabled={loading || !domain.trim() || !brandName.trim() || !description.trim()}
-            className="gradient-primary px-8 h-12 min-w-[120px]"
+            className="bg-primary-500 hover:bg-primary-600 text-white px-6 h-11 min-w-[100px]"
           >
             {loading ? 'Processing...' : 'Continue'}
           </Button>

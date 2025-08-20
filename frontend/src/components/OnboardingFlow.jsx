@@ -86,8 +86,6 @@ const OnboardingFlow = () => {
     }
   };
 
-
-
   const renderCurrentStep = () => {
     const commonProps = {
       onComplete: handleStepComplete,
@@ -112,47 +110,32 @@ const OnboardingFlow = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 gradient-primary rounded-2xl flex items-center justify-center mb-6">
+          <div className="w-16 h-16 bg-primary-500 rounded-2xl flex items-center justify-center mb-6">
             <span className="text-2xl font-bold text-white">S</span>
           </div>
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#7765e3] mx-auto mb-6"></div>
-          <p className="text-xl font-semibold text-[#4a4a6a] mb-3">Completing onboarding...</p>
-          <p className="text-[#4a4a6a] mb-2">Generating AI responses, extracting mentions, and calculating Share of Voice</p>
-          <p className="text-sm text-[#4a4a6a]/70">This may take a few minutes as we analyze your brand data</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-6"></div>
+          <p className="text-xl font-semibold text-gray-900 mb-3">Completing onboarding...</p>
+          <p className="text-gray-600 mb-2">Generating AI responses, extracting mentions, and calculating Share of Voice</p>
+          <p className="text-sm text-gray-500">This may take a few minutes as we analyze your brand data</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-4xl mx-auto py-12 px-4">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <div className="w-16 h-16 gradient-primary rounded-2xl flex items-center justify-center mx-auto mb-6">
-            <span className="text-2xl font-bold text-white">S</span>
-          </div>
-          <h1 className="text-3xl font-semibold text-[#4a4a6a] mb-3">
-            Welcome to Snowball
-          </h1>
-          <p className="text-[#4a4a6a]">
-            Let's set up your brand analysis in just a few steps
-          </p>
-        </div>
-
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-2xl mx-auto py-8 px-4">
         <ProgressBar currentStep={currentStep} />
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-8">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
             <p className="text-red-800">{error}</p>
           </div>
         )}
 
-        <div className="bg-white border border-[#b0b0d8] rounded-lg p-8">
-          {renderCurrentStep()}
-        </div>
+        {renderCurrentStep()}
       </div>
     </div>
   );
