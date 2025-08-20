@@ -18,9 +18,12 @@ const cors = require('cors');
 const app = express();
 const mainRouter = require("./routes/user");
 const brandRouter = require("./routes/brand");
+const domainAnalysisRouter = require("./routes/domainAnalysis");
 const contentCalendarRouter = require("./routes/contentCalendar");
 const cmsCredentialsRouter = require("./routes/cmsCredentials");
 const shopifyRouter = require("./routes/shopify");
+const onboardingRouter = require("./routes/onboarding");
+const regenerateAnalysisRouter = require("./routes/regenerateAnalysis");
 
 // Initialize auto-publisher
 require('./utils/autoPublisher');
@@ -65,9 +68,12 @@ app.get('/api/v1/health', (req, res) => {
 
 app.use("/api/v1", mainRouter);
 app.use("/api/v1/brand", brandRouter);
+app.use("/api/v1/domain-analysis", domainAnalysisRouter);
 app.use("/api/v1/content-calendar", contentCalendarRouter);
 app.use("/api/v1/cms-credentials", cmsCredentialsRouter);
 app.use("/api/v1/shopify", shopifyRouter);
+app.use("/api/v1/onboarding", onboardingRouter);
+app.use("/api/v1/regenerate", regenerateAnalysisRouter);
 
 // Global error handler
 app.use((err, req, res, next) => {

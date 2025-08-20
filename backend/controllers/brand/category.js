@@ -30,14 +30,13 @@ exports.extractCategories = async (domain) => {
     global.extractedBrandDescription = brandDescription;
   }
 
-  const catPrompt = `You are a data extraction engine that identifies a company's main customer-facing business categories based on the text provided.
+  const catPrompt = `identify a company's main customer-facing primary product/service offering
 
 Website: ${domain}
 Domain Information: ${domainInfo}
 
 Instructions:
-- From the domain information, identify the main business categories the company offers (products, services, or solutions).
-- Use terms from the domain info when useful, or generalize slightly for clarity.
+- identify the main primary product/service offering categories.
 - Avoid vague, internal, or technical terms that are not customer-facing.
 
 Output:

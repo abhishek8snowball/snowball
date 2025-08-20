@@ -1,0 +1,508 @@
+const OnboardingProgress = require("../models/OnboardingProgress");
+const BrandProfile = require("../models/BrandProfile");
+const BrandCategory = require("../models/BrandCategory");
+const CategorySearchPrompt = require("../models/CategorySearchPrompt");
+const { extractCategories, saveCategories } = require("./brand/category");
+const { extractCompetitorsWithOpenAI } = require("./brand/extractCompetitors");
+const PerplexityService = require("../utils/perplexityService");
+const TokenCostLogger = require("../utils/tokenCostLogger");
+
+// Initialize services
+const perplexityService = new PerplexityService();
+const tokenLogger = new TokenCostLogger();
+
+class OnboardingController {
+  // Get user's onboarding progress
+  async getProgress(req, res) {
+    try {
+      const userId = req.user.id;
+      const progress = await OnboardingProgress.findOne({ userId });
+      
+      if (!progress) {
+        return res.json({ 
+          currentStep: 1, 
+          completedSteps: [], 
+          stepData: {},
+          isCompleted: false 
+        });
+      }
+      
+      res.json(progress);
+    } catch (error) {
+      console.error('Get progress error:', error);
+      res.status(500).json({ error: 'Failed to get progress' });
+    }
+  }
+
+  // Save onboarding progress
+  async saveProgress(req, res) {
+    try {
+      const userId = req.user.id;
+      const { currentStep, stepData } = req.body;
+      
+      const progress = await OnboardingProgress.findOneAndUpdate(
+        { userId },
+        { 
+          currentStep, 
+          stepData,
+          lastUpdated: new Date(),
+          $addToSet: { completedSteps: currentStep }
+        },
+        { upsert: true, new: true }
+      );
+      
+      res.json({ success: true, progress });
+    } catch (error) {
+      console.error('Save progress error:', error);
+      res.status(500).json({ error: 'Failed to save progress' });
+    }
+  }
+
+  // Step 1: Domain analysis and AI autocomplete
+  async step1DomainAnalysis(req, res) {
+    try {
+      const userId = req.user.id;
+      const { domain } = req.body;
+      
+      if (!domain) {
+        return res.status(400).json({ error: 'Domain is required' });
+      }
+
+      console.log(`🔍 Step 1: Domain analysis for ${domain}`);
+
+      // Get domain information from Perplexity
+      const domainInfo = await perplexityService.getDomainInfo(domain);
+      
+      // Create or update brand profile
+      const brand = await BrandProfile.findOneAndUpdate(
+        { ownerUserId: userId },
+        { 
+          domain,
+          brandName: domain.replace(/^https?:\/\//, '').replace(/^www\./, ''),
+          brandInformation: domainInfo.description || '',
+          updatedAt: new Date()
+        },
+        { upsert: true, new: true }
+      );
+
+      // Save progress
+      await OnboardingProgress.findOneAndUpdate(
+        { userId },
+        { 
+          currentStep: 1,
+          'stepData.step1': {
+            domain,
+            brandName: brand.brandName,
+            description: domainInfo.description || '',
+            completed: true
+          },
+          $addToSet: { completedSteps: 1 }
+        },
+        { upsert: true }
+      );
+
+      res.json({
+        success: true,
+        brand,
+        domainInfo,
+        currentStep: 1
+      });
+
+    } catch (error) {
+      console.error('Step 1 error:', error);
+      res.status(500).json({ error: 'Domain analysis failed' });
+    }
+  }
+
+  // Step 2: Categories extraction
+  async step2Categories(req, res) {
+    try {
+      const userId = req.user.id;
+      const { categories } = req.body;
+      
+      const brand = await BrandProfile.findOne({ ownerUserId: userId });
+      if (!brand) {
+        return res.status(404).json({ error: 'Brand profile not found' });
+      }
+
+      console.log(`🏷️ Step 2: Categories for ${brand.brandName}`);
+
+      let extractedCategories = categories;
+      
+      // If no categories provided, extract them using existing API
+      if (!categories || categories.length === 0) {
+        extractedCategories = await extractCategories(brand.domain);
+      }
+
+      // Save categories to database
+      const categoryDocs = await saveCategories(brand, extractedCategories);
+
+      // Save progress
+      await OnboardingProgress.findOneAndUpdate(
+        { userId },
+        { 
+          currentStep: 2,
+          'stepData.step2': {
+            categories: extractedCategories,
+            completed: true
+          },
+          $addToSet: { completedSteps: 2 }
+        },
+        { upsert: true }
+      );
+
+      res.json({
+        success: true,
+        categories: extractedCategories,
+        categoryDocs,
+        currentStep: 2
+      });
+
+    } catch (error) {
+      console.error('Step 2 error:', error);
+      res.status(500).json({ error: 'Categories extraction failed' });
+    }
+  }
+
+  // Step 3: Competitors extraction
+  async step3Competitors(req, res) {
+    try {
+      const userId = req.user.id;
+      const { competitors } = req.body;
+      
+      const brand = await BrandProfile.findOne({ ownerUserId: userId });
+      if (!brand) {
+        return res.status(404).json({ error: 'Brand profile not found' });
+      }
+
+      console.log(`🏆 Step 3: Competitors for ${brand.brandName}`);
+
+      let extractedCompetitors = competitors;
+      
+      // If no competitors provided, extract them using existing API
+      if (!competitors || competitors.length === 0) {
+        const OpenAI = require('openai');
+        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+        
+        extractedCompetitors = await extractCompetitorsWithOpenAI(openai, brand);
+      }
+
+      // Save competitors to brand profile
+      brand.competitors = extractedCompetitors;
+      await brand.save();
+
+      // Save progress
+      await OnboardingProgress.findOneAndUpdate(
+        { userId },
+        { 
+          currentStep: 3,
+          'stepData.step3': {
+            competitors: extractedCompetitors,
+            completed: true
+          },
+          $addToSet: { completedSteps: 3 }
+        },
+        { upsert: true }
+      );
+
+      res.json({
+        success: true,
+        competitors: extractedCompetitors,
+        currentStep: 3
+      });
+
+    } catch (error) {
+      console.error('Step 3 error:', error);
+      res.status(500).json({ error: 'Competitors extraction failed' });
+    }
+  }
+
+  // Step 4: Prompts generation
+  async step4Prompts(req, res) {
+    try {
+      const userId = req.user.id;
+      
+      const brand = await BrandProfile.findOne({ ownerUserId: userId });
+      if (!brand) {
+        return res.status(404).json({ error: 'Brand profile not found' });
+      }
+
+      const categories = await BrandCategory.find({ brandId: brand._id });
+      if (categories.length === 0) {
+        return res.status(400).json({ error: 'No categories found' });
+      }
+
+      console.log(`📝 Step 4: Prompts generation for ${brand.brandName}`);
+
+      // Use the existing, more sophisticated prompt generation logic
+      const OpenAI = require('openai');
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      
+      // Import the existing prompt generation function
+      const { generateAndSavePrompts } = require('./brand/prompt');
+      
+      // Generate prompts using the existing logic
+      const prompts = await generateAndSavePrompts(
+        openai, 
+        categories, 
+        brand, 
+        brand.competitors || []
+      );
+
+      // Save progress
+      await OnboardingProgress.findOneAndUpdate(
+        { userId },
+        { 
+          currentStep: 4,
+          'stepData.step4': {
+            promptsGenerated: true,
+            completed: true
+          },
+          $addToSet: { completedSteps: 4 },
+          isCompleted: true
+        },
+        { upsert: true }
+      );
+
+      // Extract prompt data for response (existing function returns {promptDoc, catDoc} structure)
+      const promptData = prompts.map(p => ({
+        id: p.promptDoc._id,
+        promptText: p.promptDoc.promptText,
+        categoryName: p.catDoc.categoryName
+      }));
+
+      res.json({
+        success: true,
+        prompts: promptData,
+        currentStep: 4,
+        onboardingCompleted: true
+      });
+
+    } catch (error) {
+      console.error('Step 4 error:', error);
+      res.status(500).json({ error: 'Prompts generation failed' });
+    }
+  }
+
+  // Complete onboarding and trigger remaining analysis
+  async completeOnboarding(req, res) {
+    try {
+      const userId = req.user.id;
+      
+      console.log(`🚀 Completing onboarding for user: ${userId}`);
+      
+      // Set a timeout to prevent hanging requests
+      const timeout = setTimeout(() => {
+        console.log('⏰ Request timeout reached, sending response anyway');
+        if (!res.headersSent) {
+          res.json({
+            success: true,
+            message: 'Onboarding completed (timeout reached)',
+            isCompleted: true,
+            analysisSteps: {
+              aiResponsesGenerated: 'timeout',
+              mentionsExtracted: 'timeout',
+              shareOfVoiceCalculated: 'timeout'
+            }
+          });
+        }
+      }, 300000); // 5 minutes timeout
+      
+      // Mark onboarding as completed
+      await OnboardingProgress.findOneAndUpdate(
+        { userId },
+        { isCompleted: true, lastUpdated: new Date() }
+      );
+
+      // Get brand profile and categories
+      const brand = await BrandProfile.findOne({ ownerUserId: userId });
+      if (!brand) {
+        console.error('Brand profile not found for user:', userId);
+        return res.status(500).json({ error: 'Brand profile not found for analysis' });
+      }
+
+      const categories = await BrandCategory.find({ brandId: brand._id });
+      if (categories.length === 0) {
+        console.error('No categories found for brand:', brand._id);
+        return res.status(500).json({ error: 'No categories found for analysis' });
+      }
+
+      console.log(`📊 Found ${categories.length} categories for analysis`);
+
+      // --- Trigger the remaining analysis steps ---
+      console.log('🚀 Onboarding completed. Triggering remaining analysis steps...');
+
+      // 1. Generate AI responses for prompts
+      console.log('📝 Step 1: Generating AI responses for prompts...');
+      const OpenAI = require('openai');
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      
+      // Get all prompts for the brand's categories
+      const prompts = await CategorySearchPrompt.find({ 
+        categoryId: { $in: categories.map(cat => cat._id) }
+      });
+
+      if (prompts.length === 0) {
+        console.error('No prompts found for categories');
+        return res.status(500).json({ error: 'No prompts found for analysis' });
+      }
+
+      console.log(`📝 Found ${prompts.length} prompts to process`);
+
+      // Generate AI responses using existing function
+      const { runPromptsAndSaveResponses } = require('./brand/aiResponse');
+      const aiResponses = await runPromptsAndSaveResponses(
+        openai, 
+        prompts.map(p => ({ promptDoc: p, catDoc: categories.find(c => c._id.toString() === p.categoryId.toString()) })), 
+        brand._id, 
+        userId, 
+        `onboarding_${Date.now()}` // Generate unique analysis session ID
+      );
+
+      console.log(`✅ Generated ${aiResponses.length} AI responses`);
+
+      // 2. Extract brand and competitor mentions from responses
+      console.log('🔍 Step 2: Extracting brand and competitor mentions...');
+      const MentionExtractor = require('./brand/mentionExtractor');
+      const mentionExtractor = new MentionExtractor();
+
+      for (const response of aiResponses) {
+        try {
+          await mentionExtractor.extractMentionsFromResponse(
+            response.aiDoc.responseText,
+            response.aiDoc.promptId,
+            response.catDoc._id,
+            brand._id,
+            userId,
+            response.aiDoc._id,
+            `onboarding_${Date.now()}`
+          );
+        } catch (error) {
+          console.error(`Error extracting mentions for response ${response.aiDoc._id}:`, error);
+        }
+      }
+
+      console.log('✅ Mentions extracted from all responses');
+
+      // 3. Calculate Share of Voice
+      console.log('📊 Step 3: Calculating Share of Voice...');
+      const { calculateShareOfVoice } = require('./brand/shareOfVoice');
+      
+      // Ensure brand object has all required fields for SOV calculation
+      const brandForSOV = {
+        _id: brand._id,
+        brandName: brand.brandName || brand.domain?.replace(/^https?:\/\//, '').replace(/^www\./, '') || 'Unknown Brand',
+        domain: brand.domain || brand.brandName || 'unknown.com', // Add domain field
+        userId: brand.ownerUserId, // Map ownerUserId to userId as expected by SOV function
+        ownerUserId: brand.ownerUserId,
+        competitors: brand.competitors || []
+      };
+      
+      console.log('🔍 Brand object prepared for SOV calculation:', {
+        brandId: brandForSOV._id,
+        brandName: brandForSOV.brandName,
+        domain: brandForSOV.domain,
+        userId: brandForSOV.userId
+      });
+      
+      // Calculate SOV once for the entire brand (aggregating all categories)
+      console.log(`🔄 Calculating Share of Voice for entire brand (${categories.length} categories)...`);
+      
+      // Generate a single analysis session ID for the entire onboarding
+      const onboardingAnalysisSessionId = `onboarding_${Date.now()}`;
+      console.log(`📊 Using analysis session ID: ${onboardingAnalysisSessionId}`);
+      
+      try {
+        // Aggregate all responses across all categories
+        console.log(`📊 Aggregating all AI responses across ${categories.length} categories...`);
+        
+        if (aiResponses.length > 0) {
+          const startTime = Date.now();
+          
+          // Calculate SOV once using ALL responses, not per category
+          // Use the first category's ID as the primary category (this is mainly for tracking)
+          await calculateShareOfVoice(
+            brandForSOV, 
+            brandForSOV.competitors, 
+            aiResponses, // Use ALL responses, not just category-specific ones
+            categories[0]?._id, // Use first category as primary (for reference only)
+            onboardingAnalysisSessionId // Same session ID for the entire onboarding
+          );
+          
+          const endTime = Date.now();
+          console.log(`✅ SOV calculated successfully for entire brand in ${endTime - startTime}ms`);
+          console.log(`📊 Processed ${aiResponses.length} total AI responses across all categories`);
+        } else {
+          console.log(`⚠️ No AI responses found, skipping SOV calculation`);
+        }
+      } catch (error) {
+        console.error(`❌ Error calculating SOV for brand:`, error);
+      }
+
+      console.log('✅ Share of Voice calculated for all categories');
+      console.log('🎉 All remaining analysis steps completed successfully!');
+      console.log('📤 Preparing to send response...');
+
+      // Final success response
+      const successResponse = {
+        success: true,
+        message: 'Onboarding completed and remaining analysis triggered successfully',
+        isCompleted: true,
+        analysisSteps: {
+          aiResponsesGenerated: aiResponses.length,
+          mentionsExtracted: true,
+          shareOfVoiceCalculated: true
+        }
+      };
+
+      console.log('📤 Sending success response:', successResponse);
+      console.log('📤 Response object prepared, calling res.json()...');
+      
+      // Clear timeout since we're responding successfully
+      clearTimeout(timeout);
+      
+      console.log('📤 Calling res.json() now...');
+      res.json(successResponse);
+      console.log('📤 Response sent successfully!');
+
+    } catch (error) {
+      console.error('Error completing onboarding and triggering analysis:', error);
+      
+      // Clear timeout in case of error
+      if (typeof timeout !== 'undefined') {
+        clearTimeout(timeout);
+      }
+      
+      res.status(500).json({ error: 'Failed to complete onboarding and trigger analysis' });
+    }
+  }
+
+  // Check onboarding status
+  async getStatus(req, res) {
+    try {
+      const userId = req.user.id;
+      const progress = await OnboardingProgress.findOne({ userId });
+      
+      if (!progress) {
+        return res.json({ 
+          status: 'not_started',
+          currentStep: 1,
+          isCompleted: false
+        });
+      }
+      
+      res.json({
+        status: progress.isCompleted ? 'completed' : 'in_progress',
+        currentStep: progress.currentStep,
+        isCompleted: progress.isCompleted,
+        completedSteps: progress.completedSteps
+      });
+
+    } catch (error) {
+      console.error('Get status error:', error);
+      res.status(500).json({ error: 'Failed to get status' });
+    }
+  }
+}
+
+module.exports = new OnboardingController();

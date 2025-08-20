@@ -196,22 +196,19 @@ Meta Keywords: ${scrapedData.metaKeywords}`;
   // Detect brand location
   const brandLocation = await detectBrandLocation(brand.domain, contentContext);
   
-  const competitorPrompt = `Based on the following brand information, identify 5 real, direct competitors that operate in the same geographical region:
+  const competitorPrompt = `Based on the following brand information, identify 5 real, direct competitors:
 
 Brand: ${brand.brandName}
 Domain: ${brand.domain}
-Location: ${brandLocation}
+
 ${contentContext}
 
 Identify competitors that:
 - Offer similar products/services based on the website content
-- Target the same market/industry in ${brandLocation}
-- Are based in or primarily serve ${brandLocation} market
+- Target the same market/industry.
 - Are real, existing companies (not generic names)
 - Can be found through web search
-- Have significant presence in ${brandLocation} region
-
-${brandLocation !== 'global' ? `Focus on local/regional competitors in ${brandLocation} first, then include major international players that compete in this region.` : 'Include major global competitors in this industry.'}
+- Have significant presence.
 
 Respond with ONLY a JSON array of competitor brand names. Use exact company names as they appear online:
 ["Exact Company Name 1", "Exact Company Name 2", "Exact Company Name 3"]

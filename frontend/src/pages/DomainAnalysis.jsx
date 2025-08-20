@@ -11,6 +11,7 @@ import CategoriesWithPrompts from "./CategoriesWithPrompts";
 // Blog analysis moved to separate page
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { RefreshCw } from 'lucide-react';
 
 const DomainAnalysis = ({ onClose, initialDomain = "" }) => {
   const [domain, setDomain] = useState(initialDomain);
@@ -28,6 +29,9 @@ const DomainAnalysis = ({ onClose, initialDomain = "" }) => {
   // New state for domain switching
   const [existingDomain, setExistingDomain] = useState(null);
   const [showDomainWarning, setShowDomainWarning] = useState(false);
+  
+  // State for regenerating analysis
+  const [isRegenerating, setIsRegenerating] = useState(false);
 
   // Check for existing analysis first, then auto-start if needed
   useEffect(() => {
@@ -35,6 +39,9 @@ const DomainAnalysis = ({ onClose, initialDomain = "" }) => {
       setDomain(initialDomain);
       setHasStartedAnalysis(true);
       checkExistingAnalysisOrStart(initialDomain);
+    } else if (!initialDomain && !hasStartedAnalysis) {
+      // No initial domain - check if user has existing analysis to display
+      checkForExistingAnalysis();
     }
   }, [initialDomain, hasStartedAnalysis]);
 
@@ -91,6 +98,100 @@ const DomainAnalysis = ({ onClose, initialDomain = "" }) => {
     } catch (error) {
       console.log('Error checking existing analysis, starting new analysis:', error);
       handleAnalyzeWithDomain(domainToCheck);
+    }
+  };
+
+  // Function to check for existing analysis when no domain is provided
+  const checkForExistingAnalysis = async () => {
+    try {
+      console.log('Loading pre-calculated domain analysis data...');
+      
+      setLoading(true);
+      setCurrentStep("Loading domain analysis data...");
+      
+      try {
+        // Use the domain analysis API to get all pre-calculated data
+        const domainAnalysisResponse = await apiService.get('/api/v1/domain-analysis/data');
+        console.log('🚀 Domain analysis data loaded:', domainAnalysisResponse.data);
+        
+        if (domainAnalysisResponse.data.success && domainAnalysisResponse.data.data) {
+          const data = domainAnalysisResponse.data.data;
+          
+          // Transform the domain analysis data to match the expected format for the UI components
+          const transformedResult = {
+            brandId: data.brand._id,
+            brand: data.brand.brandName,
+            domain: data.brand.domain,
+            description: data.brand.brandInformation,
+            categories: data.categories || [], // Categories with prompts for display
+            competitors: data.brand.competitors || [],
+            
+            // Share of Voice data transformation
+            // The backend now returns a single SoV record with shareOfVoice and mentionCounts objects
+            shareOfVoice: data.soVResults?.[0]?.shareOfVoice || {},
+            mentionCounts: data.soVResults?.[0]?.mentionCounts || {},
+            totalMentions: data.soVResults?.[0]?.totalMentions || 0,
+            brandShare: data.soVResults?.[0]?.brandShare || 0,
+            
+            // Brand strength/AI visibility score
+            aiVisibilityScore: data.brandStrength?.overallScore || 0,
+            
+            // Additional data for traceability
+            prompts: data.prompts || [],
+            responses: data.responses || [],
+            calculationMethod: 'pre_calculated_from_onboarding'
+          };
+          
+          console.log('🎯 Transformed result for UI:', {
+            brandId: transformedResult.brandId,
+            brand: transformedResult.brand,
+            domain: transformedResult.domain,
+            categoriesCount: transformedResult.categories.length,
+            competitorsCount: transformedResult.competitors.length,
+            soVEntries: Object.keys(transformedResult.shareOfVoice).length,
+            totalMentions: transformedResult.totalMentions
+          });
+          
+          setResult(transformedResult);
+          setDomain(data.brand.domain);
+          setCurrentStep("Domain analysis loaded!");
+          toast.success("Pre-calculated domain analysis loaded successfully!");
+          return;
+        }
+      } catch (domainAnalysisError) {
+        console.log('❌ Error loading domain analysis data:', domainAnalysisError);
+        
+        // Fallback to the original method if domain analysis API fails
+        console.log('Falling back to brand analysis method...');
+        const brandsResponse = await apiService.getUserBrands();
+        const userBrands = brandsResponse.data.brands || [];
+        
+        if (userBrands.length > 0) {
+          const existingBrand = userBrands[0];
+          console.log('Found existing brand, loading analysis:', existingBrand);
+          
+          setCurrentStep("Loading existing analysis...");
+          
+          try {
+            const analysisResponse = await apiService.getBrandAnalysis(existingBrand.id);
+            console.log('Existing analysis loaded:', analysisResponse.data);
+            setResult(analysisResponse.data);
+            setCurrentStep("Analysis loaded!");
+            setDomain(existingBrand.domain);
+            toast.success("Analysis data loaded successfully!");
+          } catch (analysisError) {
+            console.log('Error loading existing analysis:', analysisError);
+            toast.error("Failed to load analysis data");
+          }
+        } else {
+          toast.error("No brand data found. Please complete onboarding first.");
+        }
+      }
+    } catch (error) {
+      console.log('❌ Error in checkForExistingAnalysis:', error);
+      toast.error("Failed to load domain analysis data");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -316,6 +417,52 @@ const DomainAnalysis = ({ onClose, initialDomain = "" }) => {
     return `${minutes}m ${remainingSeconds}s`;
   };
 
+  // Function to regenerate analysis
+  const handleRegenerateAnalysis = async () => {
+    if (!result || !result.brandId) {
+      toast.error("No brand analysis found to regenerate");
+      return;
+    }
+
+    try {
+      setIsRegenerating(true);
+      setCurrentStep("Regenerating analysis...");
+      
+      console.log('🔄 Regenerating analysis for brand:', result.brandId);
+      
+      const response = await apiService.post(`/api/v1/regenerate/regenerate/${result.brandId}`);
+      
+      if (response.data.success) {
+        console.log('✅ Analysis regenerated successfully:', response.data);
+        
+        // Update the current result with new data
+        const updatedResult = {
+          ...result,
+          shareOfVoice: response.data.sovResults.shareOfVoice || {},
+          mentionCounts: response.data.sovResults.mentionCounts || {},
+          totalMentions: response.data.sovResults.totalMentions || 0,
+          brandShare: response.data.sovResults.brandShare || 0,
+          aiVisibilityScore: response.data.sovResults.aiVisibilityScore || 0,
+          calculationMethod: response.data.sovResults.calculationMethod || 'regenerated',
+          competitors: response.data.competitors || result.competitors
+        };
+        
+        setResult(updatedResult);
+        setCurrentStep("");
+        toast.success("Analysis regenerated successfully! Fresh AI responses generated.");
+      } else {
+        throw new Error(response.data.msg || 'Failed to regenerate analysis');
+      }
+    } catch (error) {
+      console.error('❌ Error regenerating analysis:', error);
+      const errorMessage = error.response?.data?.msg || error.message || 'Failed to regenerate analysis';
+      toast.error(errorMessage);
+      setCurrentStep("");
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
+
   // Blog analysis moved to separate page
 
   return (
@@ -479,8 +626,23 @@ const DomainAnalysis = ({ onClose, initialDomain = "" }) => {
         <div className="mt-8 space-y-6">
           {/* Header */}
           <div className="text-center mb-6">
-            <h3 className="text-2xl font-bold text-foreground mb-2">Brand Analysis Result</h3>
-            <p className="text-muted-foreground">Comprehensive analysis for {result.domain}</p>
+            <div className="flex items-center justify-center gap-4 mb-4">
+              <h3 className="text-2xl font-bold text-foreground">Brand Analysis Result</h3>
+              <Button
+                onClick={handleRegenerateAnalysis}
+                disabled={isRegenerating || loading}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2 hover:bg-primary/10 hover:border-primary"
+              >
+                <RefreshCw className={`w-4 h-4 ${isRegenerating ? 'animate-spin' : ''}`} />
+                {isRegenerating ? 'Regenerating...' : 'Refresh Analysis'}
+              </Button>
+            </div>
+            <p className="text-muted-foreground">
+              Comprehensive analysis for {result.domain}
+              {isRegenerating && <span className="ml-2 text-primary">• Generating fresh responses...</span>}
+            </p>
           </div>
 
           {/* Main Analysis Grid */}

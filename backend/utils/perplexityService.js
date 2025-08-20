@@ -21,8 +21,8 @@ class PerplexityService {
 
       const prompt = `Analyze ${domainUrl} and provide two things:
 
-1. A comprehensive overview of what this company does, their business model, services, and main offerings (for category analysis)
-2. A concise 1-2 sentence brand description that summarizes their core value proposition
+1. A comprehensive overview of what this company does, their primary services, products, and offerings (for category analysis)
+2. A concise brand description that summarizes their core value proposition
 
 Format your response as:
 OVERVIEW: [detailed business overview for analysis]
@@ -31,14 +31,13 @@ DESCRIPTION: [concise brand description]`;
       const response = await axios.post(
         `${this.baseURL}/chat/completions`,
         {
-          model: 'sonar-pro',
+          model: 'sonar',
           messages: [
             {
               role: 'user',
               content: prompt
             }
           ],
-          max_tokens: 800,
           temperature: 0.1
         },
         {

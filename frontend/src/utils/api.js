@@ -2,7 +2,7 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 
 // API Configuration
-const API_BASE_URL = 'https://geo-optimizer.onrender.com';
+const API_BASE_URL = 'http://localhost:5000';
 
 console.log('API Base URL:', API_BASE_URL);
 console.log('Environment:', import.meta.env.MODE);
@@ -67,6 +67,12 @@ api.interceptors.response.use(
 
 // API methods
 export const apiService = {
+  // Generic HTTP methods for flexibility
+  get: (url, config) => api.get(url, config),
+  post: (url, data, config) => api.post(url, data, config),
+  put: (url, data, config) => api.put(url, data, config),
+  delete: (url, config) => api.delete(url, config),
+  
   // Authentication
   login: (data) => api.post('/api/v1/login', data),
   register: (data) => api.post('/api/v1/register', data),
@@ -74,6 +80,16 @@ export const apiService = {
     localStorage.removeItem('auth');
     window.location.href = '/login';
   },
+  
+  // Onboarding API methods
+  getOnboardingProgress: () => api.get('/api/v1/onboarding/progress'),
+  saveOnboardingProgress: (data) => api.post('/api/v1/onboarding/save-progress', data),
+  step1DomainAnalysis: (data) => api.post('/api/v1/onboarding/step1-domain', data),
+  step2Categories: (data) => api.post('/api/v1/onboarding/step2-categories', data),
+  step3Competitors: (data) => api.post('/api/v1/onboarding/step3-competitors', data),
+  step4Prompts: (data) => api.post('/api/v1/onboarding/step4-prompts', data),
+  completeOnboarding: () => api.post('/api/v1/onboarding/complete'),
+  getOnboardingStatus: () => api.get('/api/v1/onboarding/status'),
   
   // Removed unused getDashboard endpoint
   

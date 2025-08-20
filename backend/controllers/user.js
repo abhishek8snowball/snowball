@@ -191,6 +191,110 @@ const deleteAnalysis = async (req, res) => {
   }
 };
 
+const googleAuth = async (req, res) => {
+  try {
+    const { idToken } = req.body;
+
+    if (!idToken) {
+      return res.status(400).json({
+        success: false,
+        msg: "Google ID token is required"
+      });
+    }
+
+    // Verify the Google ID token
+    const { OAuth2Client } = require('google-auth-library');
+    const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+    
+    let ticket;
+    try {
+      ticket = await client.verifyIdToken({
+        idToken: idToken,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+    } catch (verifyError) {
+      console.error('Google token verification failed:', verifyError);
+      return res.status(401).json({
+        success: false,
+        msg: "Invalid Google token"
+      });
+    }
+
+    const payload = ticket.getPayload();
+    const { email, name, picture, sub: googleId } = payload;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        msg: "Email not provided by Google"
+      });
+    }
+
+    console.log('🔍 Google Auth - Looking for user with email:', email);
+
+    // Check if user already exists
+    let user = await User.findOne({ email });
+
+    if (user) {
+      console.log('✅ Google Auth - Existing user found:', user.name);
+      
+      // Update Google ID and profile picture if not set
+      if (!user.googleId) {
+        user.googleId = googleId;
+      }
+      if (!user.profilePicture && picture) {
+        user.profilePicture = picture;
+      }
+      await user.save();
+    } else {
+      console.log('👤 Google Auth - Creating new user:', name);
+      
+      // Create new user
+      user = new User({
+        name,
+        email,
+        googleId,
+        profilePicture: picture,
+        // Generate a random password for Google users
+        password: Math.random().toString(36).substring(2, 15),
+        provider: 'google'
+      });
+      
+      await user.save();
+      console.log('✅ Google Auth - New user created:', user.name);
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: user._id, name: user.name, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN || "30d" }
+    );
+
+    console.log('✅ Google Auth - Login successful for user:', user.name);
+
+    res.json({
+      success: true,
+      msg: "Google authentication successful",
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        profilePicture: user.profilePicture
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Google Auth error:', error);
+    res.status(500).json({
+      success: false,
+      msg: "Google authentication failed",
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   login,
   register,
@@ -198,6 +302,7 @@ module.exports = {
   getAllUsers,
   analyzeLink,
   suggestImprovements,
-  getAnalysisHistory, // <-- Make sure to export it
+  getAnalysisHistory,
   deleteAnalysis,
+  googleAuth,
 };

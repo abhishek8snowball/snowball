@@ -492,6 +492,8 @@ exports.calculateShareOfVoice = async function(brand, competitors, aiResponses, 
         userId: brand.userId,
         categoryId: categoryId,
         analysisSessionId: analysisSessionId,  // Track which analysis this belongs to
+        domain: brand.domain || brand.brandName || 'unknown.com', // Add required domain field
+        brandName: brand.brandName || 'Unknown Brand', // Add required brandName field
         totalMentions: totalMentions,
         brandShare: brandShare,
         aiVisibilityScore: aiVisibilityScore,

@@ -26,9 +26,25 @@ const UserSchema = new mongoose.Schema({
         required: [true, 'Please provide password'],
         minlength: 3
     },
+    googleId: {
+        type: String,
+        sparse: true // Allow multiple null values but ensure uniqueness when not null
+    },
+    profilePicture: {
+        type: String,
+        default: null
+    },
+    provider: {
+        type: String,
+        enum: ['local', 'google'],
+        default: 'local'
+    },
 });
 
 UserSchema.pre("save", async function(){
+    // Only hash the password if it has been modified (or is new)
+    if (!this.isModified('password')) return;
+    
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
 })

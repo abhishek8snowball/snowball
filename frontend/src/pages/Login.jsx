@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Eye, EyeOff } from 'lucide-react';
 import { apiService } from '../utils/api';
 import { toast } from 'react-toastify';
+import GoogleSignIn from '../components/GoogleSignIn';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -23,6 +24,40 @@ const Login = () => {
     });
   };
 
+  const handleLoginSuccess = async (response) => {
+    // Check onboarding status and redirect accordingly
+    try {
+      const onboardingResponse = await apiService.getOnboardingStatus();
+      
+      if (onboardingResponse.data.isCompleted) {
+        // User has completed onboarding, check if they have a brand profile
+        try {
+          const brandResponse = await apiService.getUserBrands();
+          if (brandResponse.data.brands && brandResponse.data.brands.length > 0) {
+            // User has brands, redirect directly to domain analysis dashboard
+            console.log('User has brands, redirecting to domain analysis dashboard');
+            navigate('/domain-analysis');
+          } else {
+            // User completed onboarding but no brands, go to regular dashboard
+            console.log('User completed onboarding but no brands, going to regular dashboard');
+            navigate('/dashboard');
+          }
+        } catch (brandError) {
+          console.error('Error checking user brands:', brandError);
+          // If we can't check brands, go to regular dashboard
+          navigate('/dashboard');
+        }
+      } else {
+        // User needs to complete onboarding
+        navigate('/onboarding');
+      }
+    } catch (error) {
+      console.error('Error checking onboarding status:', error);
+      // If there's an error, assume onboarding is needed
+      navigate('/onboarding');
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -33,7 +68,7 @@ const Login = () => {
       if (response.data.token) {
         localStorage.setItem('auth', response.data.token);
         toast.success('Login successful!');
-        navigate('/dashboard');
+        await handleLoginSuccess(response.data);
       } else {
         toast.error('Login failed. Please try again.');
       }
@@ -43,6 +78,14 @@ const Login = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleGoogleSignInSuccess = async (data) => {
+    await handleLoginSuccess(data);
+  };
+
+  const handleGoogleSignInError = (error) => {
+    console.error('Google sign-in failed:', error);
   };
 
   return (
@@ -64,6 +107,25 @@ const Login = () => {
         {/* Login Form */}
         <Card className="border-0 shadow-none">
           <CardContent className="p-0">
+            {/* Google Sign-in */}
+            <div className="mb-6">
+              <GoogleSignIn 
+                onSuccess={handleGoogleSignInSuccess}
+                onError={handleGoogleSignInError}
+                disabled={isLoading}
+              />
+            </div>
+
+            {/* Divider */}
+            <div className="relative mb-6">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-[#b0b0d8]" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-4 bg-white text-[#4a4a6a]">Or continue with email</span>
+              </div>
+            </div>
+
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Email Input */}
               <div className="space-y-2">

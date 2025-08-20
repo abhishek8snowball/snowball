@@ -60,7 +60,10 @@ exports.calculateMetrics = async (aiResponses, brand) => {
       // Save Share of Voice (will be calculated properly in shareOfVoice.js)
       const sov = await BrandShareOfVoice.create({
         brandId: brand._id,
+        userId: brand.userId || brand.ownerUserId, // Add required userId field
         categoryId: catDoc._id,
+        domain: brand.domain || brand.brandName || 'unknown.com', // Add required domain field
+        brandName: brand.brandName || 'Unknown Brand', // Add required brandName field
         totalMentions: brandMentions,
         targetMentions: brandMentions,
         shareOfVoicePct: brandMentions > 0 ? 100 : 0 // Will be recalculated properly

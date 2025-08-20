@@ -18,6 +18,7 @@ const BrandProfileSchema = new mongoose.Schema({
     trim: true, 
     maxlength: 2000 
   },
+  competitors: [{ type: String }], // Add missing competitors field
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });

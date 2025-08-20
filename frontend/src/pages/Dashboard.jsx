@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Input } from '../components/ui/input';
@@ -25,6 +25,7 @@ import {
 
 const Dashboard = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState('dashboard');
   const [showAnalyzeLink, setShowAnalyzeLink] = useState(false);
   const [activeTool, setActiveTool] = useState(null); // 'domain' | 'blog' | null
@@ -49,8 +50,43 @@ const Dashboard = () => {
     }
   }, [location.state]);
 
-  // Fetch user's brands
+  // Check onboarding status and fetch user's brands
   useEffect(() => {
+    const checkOnboardingStatus = async () => {
+      try {
+        // Check if user has completed onboarding
+        const onboardingResponse = await apiService.getOnboardingStatus();
+        
+        if (!onboardingResponse.data.isCompleted) {
+          // Redirect to onboarding if not completed
+          navigate('/onboarding');
+          return;
+        }
+        
+        // Check if user has brands and redirect to domain analysis if they do
+        const brandResponse = await apiService.getUserBrands();
+        if (brandResponse.data.brands && brandResponse.data.brands.length > 0) {
+          // User has brands, redirect to domain analysis page
+          console.log('User has brands, redirecting to domain analysis page');
+          navigate('/domain-analysis');
+          return;
+        }
+        
+        // Check if domain analysis is complete (for users without brands)
+        const analysisResponse = await apiService.get('/api/v1/domain-analysis/sov-status');
+        
+        if (!analysisResponse.data.status.isComplete) {
+          // Show loading state while analysis runs
+          console.log('Domain analysis in progress...');
+        }
+      } catch (error) {
+        console.error('Error checking onboarding status:', error);
+        // If there's an error, assume onboarding is needed
+        navigate('/onboarding');
+        return;
+      }
+    };
+
     const fetchUserBrands = async () => {
       try {
         const response = await apiService.getUserBrands();
@@ -60,8 +96,9 @@ const Dashboard = () => {
       }
     };
     
+    checkOnboardingStatus();
     fetchUserBrands();
-  }, []);
+  }, [navigate]);
 
   // Reset auto-load flag when manually clicking content calendar
   const handleContentCalendarClick = () => {
@@ -234,6 +271,16 @@ const Dashboard = () => {
             <Globe className="w-4 h-4" />
             <span>Domain Analysis</span>
           </button>
+
+          {userBrands.length > 0 && (
+            <button
+              onClick={() => navigate('/domain-analysis')}
+              className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20"
+            >
+              <BarChart3 className="w-4 h-4" />
+              <span>Brand Dashboard</span>
+            </button>
+          )}
 
           <button
             onClick={() => { setActiveSection('dashboard'); setActiveTool('link'); }}
@@ -428,6 +475,33 @@ const Dashboard = () => {
                         </p>
                       </CardContent>
                     </Card>
+
+                    {/* Domain Analysis Dashboard Card */}
+                    {userBrands.length > 0 && (
+                      <Card 
+                        className="cursor-pointer card-hover border border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out delay-400"
+                        onClick={() => navigate('/domain-analysis')}
+                      >
+                        <CardContent className="p-6">
+                          <div className="flex items-center space-x-4 mb-4">
+                            <div className="w-12 h-12 bg-[#7765e3] rounded-lg flex items-center justify-center">
+                              <Globe className="w-6 h-6 text-white" />
+                            </div>
+                            <div>
+                              <h3 className="text-lg font-semibold text-[#000000]">
+                                Domain Analysis Dashboard
+                              </h3>
+                              <p className="text-sm text-[#4a4a6a]">
+                                Full brand analysis & insights
+                              </p>
+                            </div>
+                          </div>
+                          <p className="text-sm text-[#4a4a6a]">
+                            View your complete brand analysis, AI responses, and Share of Voice metrics.
+                          </p>
+                        </CardContent>
+                      </Card>
+                    )}
 
 
                   </div>
