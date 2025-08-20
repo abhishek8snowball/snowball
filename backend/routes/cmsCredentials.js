@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/auth');
+const { authenticationMiddleware: auth } = require('../middleware/auth');
 const cmsCredentialsController = require('../controllers/cmsCredentials');
 
 // Apply auth middleware to all routes

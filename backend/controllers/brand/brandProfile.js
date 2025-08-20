@@ -3,7 +3,7 @@ const { analyzeBrandVoice, updateBrandProfileWithVoice } = require("./brandVoice
 
 exports.findOrCreateBrandProfile = async ({ domain, brandName, userId }) => {
   // First, check if user already has any brand profile
-  let existingBrand = await BrandProfile.findOne({ ownerUserId: userId });
+  let existingBrand = await BrandProfile.findOne({ ownerUserId: userId.toString() });
   
   if (existingBrand) {
     // User already has a brand - check if they're trying to analyze the same domain
@@ -32,7 +32,7 @@ exports.findOrCreateBrandProfile = async ({ domain, brandName, userId }) => {
     // User has no brand profile - create new one
     console.log("🆕 Creating first brand profile for user");
     const newBrand = await BrandProfile.create({ 
-      ownerUserId: userId, 
+      ownerUserId: userId.toString(), 
       brandName: brandName || domain, 
       domain 
     });
@@ -73,7 +73,7 @@ exports.updateBrandProfileWithDescriptionAndVoice = async (brandProfile, brandDe
  */
 exports.getUserBrandProfile = async (userId) => {
   try {
-    const brandProfile = await BrandProfile.findOne({ ownerUserId: userId });
+    const brandProfile = await BrandProfile.findOne({ ownerUserId: userId.toString() });
     return brandProfile;
   } catch (error) {
     console.error("❌ Error fetching user brand profile:", error.message);
@@ -86,7 +86,7 @@ exports.getUserBrandProfile = async (userId) => {
  */
 exports.canUserAnalyzeDomain = async (userId, domain) => {
   try {
-    const existingBrand = await BrandProfile.findOne({ ownerUserId: userId });
+    const existingBrand = await BrandProfile.findOne({ ownerUserId: userId.toString() });
     
     if (!existingBrand) {
       return { canAnalyze: true, message: "First brand analysis" };

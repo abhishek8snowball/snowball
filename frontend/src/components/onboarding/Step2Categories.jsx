@@ -6,6 +6,7 @@ import { Tags, Sparkles, Edit2, Plus, X } from 'lucide-react';
 const Step2Categories = ({ onComplete, loading, error, progress }) => {
   const [categories, setCategories] = useState([]);
   const [isExtracting, setIsExtracting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [editingIndex, setEditingIndex] = useState(null);
   const [editValue, setEditValue] = useState('');
 
@@ -66,7 +67,7 @@ const Step2Categories = ({ onComplete, loading, error, progress }) => {
     }
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (categories.length === 0) {
       alert('Please extract or add at least one category');
       return;
@@ -75,12 +76,24 @@ const Step2Categories = ({ onComplete, loading, error, progress }) => {
     // Filter out empty categories
     const validCategories = categories.filter(cat => cat.trim());
 
-    onComplete({
-      step2: {
-        categories: validCategories,
-        completed: true
+    try {
+      setIsSaving(true);
+      // Save categories to database via API
+      const response = await apiService.step2Categories({ categories: validCategories });
+      if (response.data.success) {
+        onComplete({
+          step2: {
+            categories: validCategories,
+            completed: true
+          }
+        }, 3);
       }
-    }, 3);
+    } catch (error) {
+      console.error('Failed to save categories:', error);
+      alert('Failed to save categories. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -196,10 +209,10 @@ const Step2Categories = ({ onComplete, loading, error, progress }) => {
         <div className="flex justify-end">
           <Button
             onClick={handleContinue}
-            disabled={loading || categories.length === 0}
+            disabled={loading || isSaving || categories.length === 0}
             className="bg-primary-500 hover:bg-primary-600 text-white px-6 h-11 min-w-[100px]"
           >
-            {loading ? 'Processing...' : 'Continue'}
+            {loading || isSaving ? 'Processing...' : 'Continue'}
           </Button>
         </div>
       </div>

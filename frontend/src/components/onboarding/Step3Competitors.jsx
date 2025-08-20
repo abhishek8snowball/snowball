@@ -7,6 +7,7 @@ import { Building2, Sparkles, Plus, X } from 'lucide-react';
 const Step3Competitors = ({ onComplete, loading, error, progress }) => {
   const [competitors, setCompetitors] = useState([]);
   const [isExtracting, setIsExtracting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [newCompetitor, setNewCompetitor] = useState('');
 
   useEffect(() => {
@@ -41,13 +42,25 @@ const Step3Competitors = ({ onComplete, loading, error, progress }) => {
     setCompetitors(competitors.filter((_, i) => i !== index));
   };
 
-  const handleContinue = () => {
-    onComplete({
-      step3: {
-        competitors,
-        completed: true
+  const handleContinue = async () => {
+    try {
+      setIsSaving(true);
+      // Save competitors to brand profile via API
+      const response = await apiService.step3Competitors({ competitors });
+      if (response.data.success) {
+        onComplete({
+          step3: {
+            competitors,
+            completed: true
+          }
+        }, 4);
       }
-    }, 4);
+    } catch (error) {
+      console.error('Failed to save competitors:', error);
+      alert('Failed to save competitors. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -137,10 +150,10 @@ const Step3Competitors = ({ onComplete, loading, error, progress }) => {
         <div className="flex justify-end">
           <Button
             onClick={handleContinue}
-            disabled={loading}
+            disabled={loading || isSaving}
             className="bg-primary-500 hover:bg-primary-600 text-white px-6 h-11 min-w-[100px]"
           >
-            {loading ? 'Processing...' : 'Continue'}
+            {loading || isSaving ? 'Processing...' : 'Continue'}
           </Button>
         </div>
       </div>

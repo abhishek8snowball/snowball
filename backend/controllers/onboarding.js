@@ -75,7 +75,7 @@ class OnboardingController {
       
       // Create or update brand profile
       const brand = await BrandProfile.findOneAndUpdate(
-        { ownerUserId: userId },
+        { ownerUserId: userId.toString() },
         { 
           domain,
           brandName: domain.replace(/^https?:\/\//, '').replace(/^www\./, ''),
@@ -120,7 +120,7 @@ class OnboardingController {
       const userId = req.user.id;
       const { categories } = req.body;
       
-      const brand = await BrandProfile.findOne({ ownerUserId: userId });
+      const brand = await BrandProfile.findOne({ ownerUserId: userId.toString() });
       if (!brand) {
         return res.status(404).json({ error: 'Brand profile not found' });
       }
@@ -170,7 +170,7 @@ class OnboardingController {
       const userId = req.user.id;
       const { competitors } = req.body;
       
-      const brand = await BrandProfile.findOne({ ownerUserId: userId });
+      const brand = await BrandProfile.findOne({ ownerUserId: userId.toString() });
       if (!brand) {
         return res.status(404).json({ error: 'Brand profile not found' });
       }
@@ -223,7 +223,7 @@ class OnboardingController {
       const userId = req.user.id;
       const { prompts: editedPrompts } = req.body; // Get edited prompts if provided
       
-      const brand = await BrandProfile.findOne({ ownerUserId: userId });
+      const brand = await BrandProfile.findOne({ ownerUserId: userId.toString() });
       if (!brand) {
         return res.status(404).json({ error: 'Brand profile not found' });
       }
@@ -342,7 +342,7 @@ class OnboardingController {
       );
 
       // Get brand profile and categories
-      const brand = await BrandProfile.findOne({ ownerUserId: userId });
+      const brand = await BrandProfile.findOne({ ownerUserId: userId.toString() });
       if (!brand) {
         console.error('Brand profile not found for user:', userId);
         return res.status(500).json({ error: 'Brand profile not found for analysis' });

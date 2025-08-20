@@ -39,6 +39,11 @@ const UserSchema = new mongoose.Schema({
         enum: ['local', 'google'],
         default: 'local'
     },
+    role: {
+        type: String,
+        enum: ['user', 'superuser'],
+        default: 'user'
+    },
 });
 
 UserSchema.pre("save", async function(){

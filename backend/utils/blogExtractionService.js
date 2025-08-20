@@ -32,7 +32,7 @@ Return ONLY a JSON array of URLs in this exact format:
 Make sure to return exactly 5 URLs. Do not include any explanations or additional text, just the JSON array.`;
 
       const requestBody = {
-        model: 'sonar-pro',
+        model: 'sonar',
         messages: [
           {
             role: 'user',
@@ -62,7 +62,7 @@ Make sure to return exactly 5 URLs. Do not include any explanations or additiona
         'Blog URL Extraction',
         prompt,
         content,
-        'sonar-pro'
+        'sonar'
       );
       
       console.log('📝 Raw response:', content);

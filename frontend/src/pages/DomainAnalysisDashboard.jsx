@@ -15,13 +15,15 @@ import {
 
 import DomainAnalysis from './DomainAnalysis';
 import { apiService } from '../utils/api';
-import { getUserName } from '../utils/auth';
+import { getUserName, isSuperuser } from '../utils/auth';
 
 const DomainAnalysisDashboard = () => {
   const navigate = useNavigate();
   const [userName, setUserName] = useState(getUserName());
   const [activeSection, setActiveSection] = useState('domain-analysis');
   const [userBrands, setUserBrands] = useState([]);
+
+  // Regular users can access their brand dashboard - no superuser check needed
 
   // Fetch user brands for navigation
   useEffect(() => {
@@ -82,13 +84,15 @@ const DomainAnalysisDashboard = () => {
             <span>Blog Analysis</span>
           </button>
 
-          <button
-            onClick={() => handleNavigate('/dashboard', 'domain')}
-            className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20"
-          >
-            <Globe className="w-4 h-4" />
-            <span>Domain Analysis</span>
-          </button>
+          {isSuperuser() && (
+            <button
+              onClick={() => handleNavigate('/dashboard', 'domain')}
+              className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20"
+            >
+              <Globe className="w-4 h-4" />
+              <span>Domain Analysis</span>
+            </button>
+          )}
 
           <button
             onClick={() => handleNavigate('/domain-analysis', 'domain-analysis')}
@@ -102,13 +106,15 @@ const DomainAnalysisDashboard = () => {
             <span>Brand Dashboard</span>
           </button>
 
-          <button
-            onClick={() => handleNavigate('/dashboard', 'link')}
-            className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20"
-          >
-            <LinkIcon className="w-4 h-4" />
-            <span>Link Analysis</span>
-          </button>
+          {isSuperuser() && (
+            <button
+              onClick={() => handleNavigate('/dashboard', 'link')}
+              className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20"
+            >
+              <LinkIcon className="w-4 h-4" />
+              <span>Link Analysis</span>
+            </button>
+          )}
 
           <button
             onClick={() => handleNavigate('/dashboard', 'content-calendar')}

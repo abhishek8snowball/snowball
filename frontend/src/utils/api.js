@@ -88,7 +88,9 @@ export const apiService = {
   step2Categories: (data) => api.post('/api/v1/onboarding/step2-categories', data),
   step3Competitors: (data) => api.post('/api/v1/onboarding/step3-competitors', data),
   step4Prompts: (data) => api.post('/api/v1/onboarding/step4-prompts', data),
-  completeOnboarding: () => api.post('/api/v1/onboarding/complete'),
+  completeOnboarding: () => api.post('/api/v1/onboarding/complete', {}, {
+    timeout: 360000, // 6 minutes timeout for onboarding completion (increased to handle analysis)
+  }),
   getOnboardingStatus: () => api.get('/api/v1/onboarding/status'),
   
   // Removed unused getDashboard endpoint

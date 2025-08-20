@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiService } from '../utils/api';
+import { isSuperuser } from '../utils/auth';
 import Step1Business from './onboarding/Step1Business';
 import Step2Categories from './onboarding/Step2Categories';
 import Step3Competitors from './onboarding/Step3Competitors';
@@ -75,7 +76,8 @@ const OnboardingFlow = () => {
       if (response.data.success) {
         console.log('✅ Onboarding completed successfully:', response.data.analysisSteps);
         
-        // Redirect to the existing DomainAnalysis page (not a separate dashboard)
+        // All users who complete onboarding go to their brand dashboard
+        // The difference is that only superusers can see the "Domain Analysis" tool in the sidebar
         navigate('/domain-analysis');
       } else {
         throw new Error('Onboarding completion failed');

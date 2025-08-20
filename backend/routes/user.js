@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const authenticationMiddleware = require("../middleware/auth");
+const { authenticationMiddleware } = require("../middleware/auth");
 
 // Import authentication controllers
 const { login, register, dashboard, getAllUsers, googleAuth } = require("../controllers/user");
@@ -14,6 +14,20 @@ router.post("/register", register);
 router.post("/auth/google", googleAuth);
 router.get("/dashboard", authenticationMiddleware, dashboard);
 router.get("/users", authenticationMiddleware, getAllUsers);
+
+// Get current user info including role
+router.get("/me", authenticationMiddleware, (req, res) => {
+  res.json({
+    success: true,
+    user: {
+      id: req.user.id,
+      name: req.user.name,
+      email: req.user.email,
+      role: req.user.role,
+      profilePicture: req.user.profilePicture
+    }
+  });
+});
 
 // Brand settings routes
 router.get("/brand-settings", authenticationMiddleware, getBrandSettings);

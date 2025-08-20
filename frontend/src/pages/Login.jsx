@@ -7,6 +7,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { apiService } from '../utils/api';
 import { toast } from 'react-toastify';
 import GoogleSignIn from '../components/GoogleSignIn';
+import { isSuperuser } from '../utils/auth';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -30,15 +31,15 @@ const Login = () => {
       const onboardingResponse = await apiService.getOnboardingStatus();
       
       if (onboardingResponse.data.isCompleted) {
-        // User has completed onboarding, check if they have a brand profile
+        // User has completed onboarding, check if they are superuser and have a brand profile
         try {
           const brandResponse = await apiService.getUserBrands();
           if (brandResponse.data.brands && brandResponse.data.brands.length > 0) {
-            // User has brands, redirect directly to domain analysis dashboard
-            console.log('User has brands, redirecting to domain analysis dashboard');
+            // User with brands, redirect to brand dashboard (domain analysis dashboard)
+            console.log('User has brands, redirecting to brand dashboard');
             navigate('/domain-analysis');
           } else {
-            // User completed onboarding but no brands, go to regular dashboard
+            // User without brands, go to regular dashboard
             console.log('User completed onboarding but no brands, going to regular dashboard');
             navigate('/dashboard');
           }

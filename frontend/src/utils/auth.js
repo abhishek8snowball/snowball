@@ -31,3 +31,12 @@ export const getUserName = () => {
   const userInfo = getUserInfo();
   return userInfo?.name || 'User';
 };
+
+export const getUserRole = () => {
+  const userInfo = getUserInfo();
+  return userInfo?.role || 'user';
+};
+
+export const isSuperuser = () => {
+  return getUserRole() === 'superuser';
+};

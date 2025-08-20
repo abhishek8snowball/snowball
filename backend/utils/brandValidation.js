@@ -11,7 +11,7 @@ exports.validateBrandOwnership = async (userId, brandId) => {
   try {
     const brand = await BrandProfile.findOne({
       _id: brandId,
-      ownerUserId: userId
+      ownerUserId: userId.toString()
     });
 
     if (!brand) {
@@ -46,8 +46,10 @@ exports.validateCategoryOwnership = async (userId, categoryId) => {
       return null;
     }
 
-    if (category.brandId.ownerUserId.toString() !== userId) {
+    if (category.brandId.ownerUserId.toString() !== userId.toString()) {
       console.log(`❌ Category ownership validation failed: User ${userId} does not own category ${categoryId}`);
+      console.log(`🔍 Debug - Expected userId: ${userId} (${typeof userId})`);
+      console.log(`🔍 Debug - Actual ownerUserId: ${category.brandId.ownerUserId} (${typeof category.brandId.ownerUserId})`);
       return null;
     }
 
@@ -66,7 +68,7 @@ exports.validateCategoryOwnership = async (userId, categoryId) => {
  */
 exports.getUserBrands = async (userId) => {
   try {
-    const brands = await BrandProfile.find({ ownerUserId: userId })
+    const brands = await BrandProfile.find({ ownerUserId: userId.toString() })
       .sort({ createdAt: -1 });
 
     console.log(`✅ Found ${brands.length} brands for user ${userId}`);
@@ -87,7 +89,7 @@ exports.getUserCategories = async (userId) => {
     const categories = await BrandCategory.find()
       .populate({
         path: 'brandId',
-        match: { ownerUserId: userId },
+        match: { ownerUserId: userId.toString() },
         select: 'brandName domain ownerUserId'
       })
       .sort({ createdAt: -1 });

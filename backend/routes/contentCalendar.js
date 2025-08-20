@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/auth');
+const { authenticationMiddleware: auth } = require('../middleware/auth');
 const contentCalendarController = require('../controllers/contentCalendar');
 const autoPublisher = require('../utils/autoPublisher');
 const ContentCalendar = require('../models/ContentCalendar');

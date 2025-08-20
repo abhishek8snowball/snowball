@@ -5,7 +5,7 @@ const cheerio = require('cheerio');
 const mongoose = require('mongoose');
 const { Configuration, OpenAIApi } = require("openai");
 const OpenAI = require("openai");
-const authMiddleware = require('../middleware/auth');
+const { authenticationMiddleware } = require('../middleware/auth');
 
 // Removed old Analysis model definition - now using the new Analysis model from models/Analysis.js
 
@@ -32,7 +32,7 @@ const login = async (req, res) => {
 
     if (isMatch) {
       const token = jwt.sign(
-        { id: foundUser._id, name: foundUser.name },
+        { id: foundUser._id, name: foundUser.name, role: foundUser.role || 'user' },
         process.env.JWT_SECRET,
         {
           expiresIn: "30d",
@@ -266,7 +266,7 @@ const googleAuth = async (req, res) => {
 
     // Generate JWT token
     const token = jwt.sign(
-      { id: user._id, name: user.name, email: user.email },
+      { id: user._id, name: user.name, email: user.email, role: user.role || 'user' },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || "30d" }
     );
@@ -281,7 +281,8 @@ const googleAuth = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        profilePicture: user.profilePicture
+        profilePicture: user.profilePicture,
+        role: user.role || 'user'
       }
     });
 

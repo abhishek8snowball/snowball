@@ -6,6 +6,7 @@ import { MessageSquare, Sparkles, Check, Edit2, Save, X } from 'lucide-react';
 const Step4Prompts = ({ onComplete, loading, error, progress }) => {
   const [prompts, setPrompts] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [editingIndex, setEditingIndex] = useState(null);
   const [editValue, setEditValue] = useState('');
 
@@ -72,14 +73,26 @@ const Step4Prompts = ({ onComplete, loading, error, progress }) => {
     setEditValue('');
   };
 
-  const handleComplete = () => {
-    onComplete({
-      step4: {
-        promptsGenerated: prompts.length > 0,
-        prompts: prompts, // Send the edited prompts
-        completed: true
+  const handleComplete = async () => {
+    try {
+      setIsSaving(true);
+      // Save final prompts to database via API (ensures all edits are saved)
+      const response = await apiService.step4Prompts({ prompts });
+      if (response.data.success) {
+        onComplete({
+          step4: {
+            promptsGenerated: prompts.length > 0,
+            prompts: prompts, // Send the edited prompts
+            completed: true
+          }
+        }, 5);
       }
-    }, 5);
+    } catch (error) {
+      console.error('Failed to save prompts:', error);
+      alert('Failed to save prompts. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -194,10 +207,10 @@ const Step4Prompts = ({ onComplete, loading, error, progress }) => {
         <div className="flex justify-end">
           <Button
             onClick={handleComplete}
-            disabled={loading || prompts.length === 0}
+            disabled={loading || isSaving || prompts.length === 0}
             className="bg-primary-500 hover:bg-primary-600 text-white px-6 h-11 min-w-[100px]"
           >
-            {loading ? 'Processing...' : 'Complete Setup'}
+            {loading || isSaving ? 'Processing...' : 'Complete Setup'}
           </Button>
         </div>
       </div>

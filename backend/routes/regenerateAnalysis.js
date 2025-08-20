@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const authMiddleware = require('../middleware/auth');
+const { authenticationMiddleware: authMiddleware } = require('../middleware/auth');
 const { calculateShareOfVoice } = require('../controllers/brand/shareOfVoice');
 const { extractCompetitorsWithOpenAI } = require('../controllers/brand/extractCompetitors');
 const { runPromptsAndSaveResponses } = require('../controllers/brand/aiResponse');

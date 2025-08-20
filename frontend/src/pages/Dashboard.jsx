@@ -9,7 +9,7 @@ import ContentCalendarView from './ContentCalendarView';
 import BrandSettings from '../components/BrandSettings';
 
 import { apiService } from '../utils/api';
-import { getUserName } from '../utils/auth';
+import { getUserName, isSuperuser } from '../utils/auth';
 import { 
   BarChart3, 
   Globe, 
@@ -34,6 +34,7 @@ const Dashboard = () => {
   const [isLoadingContentCalendar, setIsLoadingContentCalendar] = useState(false);
   const [shouldAutoLoadContent, setShouldAutoLoadContent] = useState(false);
   const [userBrands, setUserBrands] = useState([]);
+  const [isUserSuperuser, setIsUserSuperuser] = useState(isSuperuser());
 
   // Handle navigation state from blog editor
   useEffect(() => {
@@ -67,18 +68,27 @@ const Dashboard = () => {
         // Users should be able to access the regular Dashboard
         // Login.jsx handles the initial redirect after login/onboarding
         
-        // Check if domain analysis is complete (for users without brands)
-        const analysisResponse = await apiService.get('/api/v1/domain-analysis/sov-status');
-        
-        if (!analysisResponse.data.status.isComplete) {
-          // Show loading state while analysis runs
-          console.log('Domain analysis in progress...');
+        // All users can check their domain analysis status (from their completed onboarding)
+        // This is just viewing existing data, not creating new analyses
+        try {
+          const analysisResponse = await apiService.get('/api/v1/domain-analysis/sov-status');
+          
+          if (!analysisResponse.data.status.isComplete) {
+            // Show loading state while analysis runs
+            console.log('Domain analysis in progress...');
+          }
+        } catch (analysisError) {
+          console.log('No existing domain analysis data found, which is normal for some users');
+          // Continue without domain analysis status - this is normal for users without onboarding data
         }
       } catch (error) {
         console.error('Error checking onboarding status:', error);
-        // If there's an error, assume onboarding is needed
-        navigate('/onboarding');
-        return;
+        // Only redirect to onboarding if it's specifically an onboarding-related error
+        // Don't redirect for domain analysis access errors (403 forbidden)
+        if (error.response?.status !== 403) {
+          navigate('/onboarding');
+          return;
+        }
       }
     };
 
@@ -255,17 +265,19 @@ const Dashboard = () => {
             <span>Blog Analysis</span>
           </button>
 
-          <button
-            onClick={() => { setActiveSection('dashboard'); setActiveTool('domain'); }}
-            className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-              activeSection === 'domain-analysis' || activeTool === 'domain'
-                ? 'nav-active'
-                : 'text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20'
-            }`}
-          >
-            <Globe className="w-4 h-4" />
-            <span>Domain Analysis</span>
-          </button>
+          {isUserSuperuser && (
+            <button
+              onClick={() => { setActiveSection('dashboard'); setActiveTool('domain'); }}
+              className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                activeSection === 'domain-analysis' || activeTool === 'domain'
+                  ? 'nav-active'
+                  : 'text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20'
+              }`}
+            >
+              <Globe className="w-4 h-4" />
+              <span>Domain Analysis</span>
+            </button>
+          )}
 
           {userBrands.length > 0 && (
             <button
@@ -371,30 +383,32 @@ const Dashboard = () => {
                 <>
                   {/* Action Cards */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {/* Domain Analysis Card */}
-                    <Card 
-                      className="cursor-pointer card-hover border border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out"
-                      onClick={() => setActiveTool('domain')}
-                    >
-                      <CardContent className="p-6">
-                        <div className="flex items-center space-x-4 mb-4">
-                          <div className="w-12 h-12 bg-[#7c77ff] rounded-lg flex items-center justify-center">
-                            <Globe className="w-6 h-6 text-white" />
+                    {/* Domain Analysis Card - Only for superusers */}
+                    {isUserSuperuser && (
+                      <Card 
+                        className="cursor-pointer card-hover border border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out"
+                        onClick={() => setActiveTool('domain')}
+                      >
+                        <CardContent className="p-6">
+                          <div className="flex items-center space-x-4 mb-4">
+                            <div className="w-12 h-12 bg-[#7c77ff] rounded-lg flex items-center justify-center">
+                              <Globe className="w-6 h-6 text-white" />
+                            </div>
+                            <div>
+                              <h3 className="text-lg font-semibold text-[#000000]">
+                                Domain Analysis
+                              </h3>
+                              <p className="text-sm text-[#4a4a6a]">
+                                Comprehensive brand insights
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <h3 className="text-lg font-semibold text-[#000000]">
-                              Domain Analysis
-                            </h3>
-                            <p className="text-sm text-[#4a4a6a]">
-                              Comprehensive brand insights
-                            </p>
-                          </div>
-                        </div>
-                        <p className="text-sm text-[#4a4a6a]">
-                          Analyze entire domains for competitive intelligence, brand positioning, and market opportunities.
-                        </p>
-                      </CardContent>
-                    </Card>
+                          <p className="text-sm text-[#4a4a6a]">
+                            Analyze entire domains for competitive intelligence, brand positioning, and market opportunities.
+                          </p>
+                        </CardContent>
+                      </Card>
+                    )}
 
                     {/* Blog Analysis Card */}
                     <Card 
@@ -471,7 +485,7 @@ const Dashboard = () => {
                       </CardContent>
                     </Card>
 
-                    {/* Domain Analysis Dashboard Card */}
+                    {/* Brand Dashboard Card - Available for all users with brands */}
                     {userBrands.length > 0 && (
                       <Card 
                         className="cursor-pointer card-hover border border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out delay-400"
@@ -484,10 +498,10 @@ const Dashboard = () => {
                             </div>
                             <div>
                               <h3 className="text-lg font-semibold text-[#000000]">
-                                Domain Analysis Dashboard
+                                Brand Dashboard
                               </h3>
                               <p className="text-sm text-[#4a4a6a]">
-                                Full brand analysis & insights
+                                Brand analysis & insights
                               </p>
                             </div>
                           </div>
@@ -501,8 +515,8 @@ const Dashboard = () => {
 
                   </div>
 
-                  {/* Analyze Link Form */}
-                  {showAnalyzeLink && (
+                  {/* Analyze Link Form - Only for superusers */}
+                  {isUserSuperuser && showAnalyzeLink && (
                     <Card className="border border-[#b0b0d8] bg-white">
                       <CardHeader>
                         <CardTitle className="text-[#4a4a6a]">Quick Link Analysis</CardTitle>
@@ -529,14 +543,16 @@ const Dashboard = () => {
 
                   {/* Quick Actions */}
                   <div className="flex space-x-4">
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowAnalyzeLink(!showAnalyzeLink)}
-                      className="flex items-center space-x-2 border-[#b0b0d8] text-[#4a4a6a] hover:bg-white hover:border-[#6658f4]"
-                    >
-                      <LinkIcon className="w-4 h-4" />
-                      <span>Quick Link Analysis</span>
-                    </Button>
+                    {isUserSuperuser && (
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowAnalyzeLink(!showAnalyzeLink)}
+                        className="flex items-center space-x-2 border-[#b0b0d8] text-[#4a4a6a] hover:bg-white hover:border-[#6658f4]"
+                      >
+                        <LinkIcon className="w-4 h-4" />
+                        <span>Quick Link Analysis</span>
+                      </Button>
+                    )}
                   </div>
                 </>
               )}
