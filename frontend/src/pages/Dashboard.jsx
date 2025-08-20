@@ -63,14 +63,9 @@ const Dashboard = () => {
           return;
         }
         
-        // Check if user has brands and redirect to domain analysis if they do
-        const brandResponse = await apiService.getUserBrands();
-        if (brandResponse.data.brands && brandResponse.data.brands.length > 0) {
-          // User has brands, redirect to domain analysis page
-          console.log('User has brands, redirecting to domain analysis page');
-          navigate('/domain-analysis');
-          return;
-        }
+        // Don't auto-redirect to domain analysis from Dashboard
+        // Users should be able to access the regular Dashboard
+        // Login.jsx handles the initial redirect after login/onboarding
         
         // Check if domain analysis is complete (for users without brands)
         const analysisResponse = await apiService.get('/api/v1/domain-analysis/sov-status');
