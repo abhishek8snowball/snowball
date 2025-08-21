@@ -270,9 +270,8 @@ exports.getBrandAnalysis = async (req, res) => {
 
     console.log("✅ Brand ownership validated:", brand.brandName);
 
-    // Get the most recent analysis for this brand
-    const latestAnalysis = await BrandShareOfVoice.findOne({ brandId: brand._id, userId })
-      .sort({ analysisDate: -1 });
+    // Get the current analysis for this brand (guaranteed to be only one record)
+    const latestAnalysis = await BrandShareOfVoice.findOne({ brandId: brand._id, userId });
 
     if (!latestAnalysis) {
       return res.status(404).json({ 
@@ -539,6 +538,13 @@ exports.getBrandAnalysis = async (req, res) => {
       firstCategoryFull: categoriesWithPrompts[0] || null
     });
 
+    console.log("📊 SOV data consistency check:", {
+      totalMentions: latestAnalysis.totalMentions,
+      shareOfVoice: Object.keys(shareOfVoice).length,
+      mentionCounts: Object.keys(mentionCounts).length,
+      competitors: latestAnalysis.competitors?.length || 0
+    });
+
     res.json({
       success: true,
       brand: latestAnalysis.brandName,
@@ -549,10 +555,10 @@ exports.getBrandAnalysis = async (req, res) => {
       competitors: latestAnalysis.competitors || [],
       shareOfVoice: shareOfVoice,
       mentionCounts: mentionCounts,
-      totalMentions: latestAnalysis.totalMentions || 0,
+      totalMentions: latestAnalysis.totalMentions || 0, // Use fresh database value
       brandShare: latestAnalysis.brandShare || 0,
       aiVisibilityScore: latestAnalysis.aiVisibilityScore || 0,
-      status: "Analysis retrieved from database."
+      status: "Analysis retrieved from database - fresh data guaranteed."
     });
 
   } catch (err) {

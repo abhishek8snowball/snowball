@@ -352,7 +352,7 @@ exports.calculateShareOfVoice = async function(brand, competitors, aiResponses, 
       return createFallbackSOV(brand, competitors);
     }
     
-    // ✅ STEP 4: Save results to database
+    // ✅ STEP 4: Save results to database (upsert based on analysisSessionId)
     try {
       const shareOfVoiceData = {
         brandId: brand._id,
@@ -367,16 +367,33 @@ exports.calculateShareOfVoice = async function(brand, competitors, aiResponses, 
         shareOfVoice: shareOfVoice,
         mentionCounts: mentionCounts,
         calculationMethod: 'cumulative_all_sessions',
-        createdAt: new Date()
+        competitors: [brand.brandName, ...competitors], // Update competitors list
+        updatedAt: new Date(),
+        analysisDate: new Date()
       };
       
-      const savedShareOfVoice = await BrandShareOfVoice.create(shareOfVoiceData);
-      console.log("✅ Share of Voice saved to database successfully");
-      console.log("✅ Saved document ID:", savedShareOfVoice._id);
+      // Clean approach: Delete existing SOV records and create fresh one
+      // This ensures frontend always gets the latest, most accurate data
+      console.log("🗑️ Removing old SOV records for brand to ensure clean data...");
+      const deleteResult = await BrandShareOfVoice.deleteMany({ 
+        brandId: brand._id,
+        userId: brand.userId 
+      });
+      console.log(`✅ Deleted ${deleteResult.deletedCount} old SOV records`);
+      
+      // Create fresh SOV record with latest data
+      const savedShareOfVoice = await BrandShareOfVoice.create({
+        ...shareOfVoiceData,
+        createdAt: new Date()
+      });
+      
+      console.log("✅ Fresh Share of Voice record created successfully");
+      console.log("✅ Document ID:", savedShareOfVoice._id);
       console.log("✅ Analysis Session ID:", analysisSessionId);
+      console.log("✅ Operation: Created fresh record");
       
     } catch (saveError) {
-      console.error("❌ Error saving Share of Voice to database:", saveError.message);
+      console.error("❌ Error upserting Share of Voice to database:", saveError.message);
       // Continue without saving - results are still valid
     }
     

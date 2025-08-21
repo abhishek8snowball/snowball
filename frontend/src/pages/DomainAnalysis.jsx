@@ -410,7 +410,7 @@ const DomainAnalysis = ({ onClose, initialDomain = "" }) => {
     onClose();
   };
 
-  // Function to refresh SOV data after competitor addition
+  // Function to refresh SOV data after competitor addition or custom prompt addition
   const refreshSOVData = async () => {
     if (!result || !result.brandId) {
       console.log('❌ No brandId available for SOV refresh');
@@ -420,11 +420,19 @@ const DomainAnalysis = ({ onClose, initialDomain = "" }) => {
     try {
       console.log('🔄 Refreshing SOV data for brandId:', result.brandId);
       
+      // Add a small delay to ensure backend processing is complete
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       // Refetch the brand analysis to get updated SOV data
       const analysisResponse = await apiService.getBrandAnalysis(result.brandId);
-      console.log('✅ SOV data refreshed:', analysisResponse.data);
+      console.log('✅ SOV data refreshed:', {
+        shareOfVoice: analysisResponse.data.shareOfVoice,
+        mentionCounts: analysisResponse.data.mentionCounts,
+        totalMentions: analysisResponse.data.totalMentions,
+        competitors: analysisResponse.data.competitors?.length || 0
+      });
       
-      // Update the result with new SOV data
+      // Update the result with new SOV data and any updated fields
       setResult(prevResult => ({
         ...prevResult,
         shareOfVoice: analysisResponse.data.shareOfVoice,
@@ -432,14 +440,20 @@ const DomainAnalysis = ({ onClose, initialDomain = "" }) => {
         totalMentions: analysisResponse.data.totalMentions,
         brandShare: analysisResponse.data.brandShare,
         aiVisibilityScore: analysisResponse.data.aiVisibilityScore,
-        competitors: analysisResponse.data.competitors // Update competitors list too
+        competitors: analysisResponse.data.competitors, // Update competitors list
+        categories: analysisResponse.data.categories || prevResult.categories // Update categories if available
       }));
       
       console.log('✅ SOV table data updated successfully');
+      toast.success('Data refreshed successfully!');
       
     } catch (error) {
       console.error('❌ Error refreshing SOV data:', error);
-      toast.error('Failed to refresh data. Please refresh the page.');
+      console.error('❌ Error details:', {
+        status: error.response?.status,
+        message: error.response?.data?.msg || error.message
+      });
+      toast.error('Failed to refresh data. Please try again.');
     }
   };
 
@@ -727,6 +741,7 @@ const DomainAnalysis = ({ onClose, initialDomain = "" }) => {
               <CategoriesWithPrompts 
                 categories={result.categories} 
                 brandId={result.brandId} 
+                onSOVUpdate={refreshSOVData}
               />
               
               {/* Blog analysis moved to separate page */}

@@ -6,7 +6,7 @@ import { Button } from '../components/ui/button';
 import { ChevronDown, ChevronRight, MessageSquare, Sparkles, Clock } from 'lucide-react';
 import AddCustomPrompt from '../components/AddCustomPrompt';
 
-const CategoriesWithPrompts = ({ categories, brandId }) => {
+const CategoriesWithPrompts = ({ categories, brandId, onSOVUpdate }) => {
   const [categoryPrompts, setCategoryPrompts] = useState({});
   const [loading, setLoading] = useState(false);
   const [expandedCategory, setExpandedCategory] = useState(null);
@@ -259,6 +259,12 @@ const CategoriesWithPrompts = ({ categories, brandId }) => {
     
     // Refresh the category prompts data
     fetchCategoryPrompts();
+    
+    // Trigger SOV data refresh if callback provided
+    if (onSOVUpdate && typeof onSOVUpdate === 'function') {
+      console.log('🔄 Triggering SOV data refresh after custom prompt...');
+      onSOVUpdate();
+    }
     
     // Optionally show a success message
     console.log('✅ Data refreshed after custom prompt addition');

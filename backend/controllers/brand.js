@@ -514,6 +514,10 @@ exports.addCompetitor = async (req, res) => {
         competitors: brand.competitors // Now includes new competitor
       };
 
+      // Use consistent analysis session management for competitor addition
+      const { getOrCreateAnalysisSession } = require("../utils/analysisSessionManager");
+      const analysisSessionId = await getOrCreateAnalysisSession(brand._id, userId);
+
       // Recalculate SOV
       const { calculateShareOfVoice } = require('./brand/shareOfVoice');
       const sovResult = await calculateShareOfVoice(
@@ -521,7 +525,7 @@ exports.addCompetitor = async (req, res) => {
         brandForSOV.competitors,
         userResponses,
         userCategories[0]?._id, // Use first category as reference
-        `competitor_add_${Date.now()}` // New analysis session for this update
+        analysisSessionId // Use consistent session ID
       );
       
       console.log(`✅ SOV recalculated successfully`);
@@ -660,6 +664,10 @@ exports.deleteCompetitor = async (req, res) => {
         competitors: brand.competitors // Now excludes deleted competitor
       };
 
+      // Use consistent analysis session management for competitor deletion
+      const { getOrCreateAnalysisSession } = require("../utils/analysisSessionManager");
+      const analysisSessionId = await getOrCreateAnalysisSession(brand._id, userId);
+
       // Recalculate SOV
       const { calculateShareOfVoice } = require('./brand/shareOfVoice');
       const sovResult = await calculateShareOfVoice(
@@ -667,7 +675,7 @@ exports.deleteCompetitor = async (req, res) => {
         brandForSOV.competitors,
         userResponses,
         userCategories[0]?._id, // Use first category as reference
-        `competitor_delete_${Date.now()}` // New analysis session for this update
+        analysisSessionId // Use consistent session ID
       );
       
       console.log(`✅ SOV recalculated successfully after competitor deletion`);
@@ -782,8 +790,9 @@ exports.generateCustomResponse = async (req, res) => {
     const MentionExtractor = require('./brand/mentionExtractor');
     const mentionExtractor = new MentionExtractor();
 
-    // Generate unique analysis session ID for this custom prompt
-    const analysisSessionId = `custom_${Date.now()}_${promptId}`;
+    // Use consistent analysis session management
+    const { getOrCreateAnalysisSession } = require("../utils/analysisSessionManager");
+    const analysisSessionId = await getOrCreateAnalysisSession(brand._id, userId);
     
     await mentionExtractor.extractMentionsFromResponse(
       responseText,
