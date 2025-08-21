@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
-import { BarChart3, MessageSquare, FileText, X, Building2 } from 'lucide-react';
+import { BarChart3, MessageSquare, FileText, X, Building2, Plus, Trash2 } from 'lucide-react';
+import { apiService } from '../utils/api';
 
 const ShareOfVoiceTable = ({ 
   shareOfVoice, 
@@ -13,11 +14,23 @@ const ShareOfVoiceTable = ({
   aiVisibilityScore,
   brandId,
   brandName,
-  calculationMethod: propCalculationMethod
+  calculationMethod: propCalculationMethod,
+  onDataUpdate // Add callback prop for refreshing parent data
 }) => {
   const [selectedBrand, setSelectedBrand] = useState(null);
   const [mentionData, setMentionData] = useState(null);
   const [loadingMentions, setLoadingMentions] = useState(false);
+  
+  // Add Competitor Modal State
+  const [showAddCompetitor, setShowAddCompetitor] = useState(false);
+  const [newCompetitorName, setNewCompetitorName] = useState('');
+  const [addingCompetitor, setAddingCompetitor] = useState(false);
+  const [addCompetitorError, setAddCompetitorError] = useState('');
+  
+  // Delete Competitor State
+  const [deletingCompetitor, setDeletingCompetitor] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [competitorToDelete, setCompetitorToDelete] = useState('');
 
   // Debug logging
   console.log("ShareOfVoiceTable received props:", {
@@ -80,6 +93,120 @@ const ShareOfVoiceTable = ({
     } finally {
       setLoadingMentions(false);
     }
+  };
+
+  // Handle adding new competitor
+  const handleAddCompetitor = async (e) => {
+    e.preventDefault();
+    setAddCompetitorError('');
+    
+    // Validation
+    if (!newCompetitorName.trim()) {
+      setAddCompetitorError('Competitor name is required');
+      return;
+    }
+    
+    if (newCompetitorName.trim().length < 2) {
+      setAddCompetitorError('Competitor name must be at least 2 characters');
+      return;
+    }
+    
+    if (!brandId) {
+      setAddCompetitorError('Brand ID not available');
+      return;
+    }
+    
+    setAddingCompetitor(true);
+    
+    try {
+      console.log(`🏢 Adding competitor: "${newCompetitorName.trim()}" to brand: ${brandId}`);
+      
+      const response = await apiService.addCompetitor(brandId, {
+        competitorName: newCompetitorName.trim()
+      });
+      
+      console.log('✅ Competitor added successfully:', response.data);
+      
+      // Reset form
+      setNewCompetitorName('');
+      setShowAddCompetitor(false);
+      
+      // Show success message
+      alert(`Competitor "${response.data.competitor}" added successfully! SOV table updated.`);
+      
+      // Trigger parent data refresh if callback provided
+      if (onDataUpdate && typeof onDataUpdate === 'function') {
+        console.log('🔄 Triggering parent data refresh...');
+        onDataUpdate();
+      }
+      
+    } catch (error) {
+      console.error('❌ Error adding competitor:', error);
+      
+      // Extract error message from response
+      const errorMessage = error.response?.data?.msg || error.message || 'Failed to add competitor';
+      setAddCompetitorError(errorMessage);
+    } finally {
+      setAddingCompetitor(false);
+    }
+  };
+
+  // Handle closing modal
+  const handleCloseModal = () => {
+    setShowAddCompetitor(false);
+    setNewCompetitorName('');
+    setAddCompetitorError('');
+  };
+
+  // Handle delete competitor confirmation
+  const handleDeleteClick = (competitorName) => {
+    setCompetitorToDelete(competitorName);
+    setShowDeleteConfirm(true);
+  };
+
+  // Handle delete competitor
+  const handleDeleteCompetitor = async () => {
+    if (!competitorToDelete || !brandId) {
+      return;
+    }
+
+    setDeletingCompetitor(competitorToDelete);
+    
+    try {
+      console.log(`🗑️ Deleting competitor: "${competitorToDelete}" from brand: ${brandId}`);
+      
+      const response = await apiService.deleteCompetitor(brandId, competitorToDelete);
+      
+      console.log('✅ Competitor deleted successfully:', response.data);
+      
+      // Close confirmation modal
+      setShowDeleteConfirm(false);
+      setCompetitorToDelete('');
+      
+      // Show success message
+      alert(`Competitor "${response.data.deletedCompetitor}" deleted successfully! SOV table updated.`);
+      
+      // Trigger parent data refresh if callback provided
+      if (onDataUpdate && typeof onDataUpdate === 'function') {
+        console.log('🔄 Triggering parent data refresh after deletion...');
+        onDataUpdate();
+      }
+      
+    } catch (error) {
+      console.error('❌ Error deleting competitor:', error);
+      
+      // Extract error message from response
+      const errorMessage = error.response?.data?.msg || error.message || 'Failed to delete competitor';
+      alert(`Error: ${errorMessage}`);
+    } finally {
+      setDeletingCompetitor(null);
+    }
+  };
+
+  // Handle cancel delete
+  const handleCancelDelete = () => {
+    setShowDeleteConfirm(false);
+    setCompetitorToDelete('');
   };
 
   // Function to close mention details
@@ -156,11 +283,24 @@ const ShareOfVoiceTable = ({
   return (
     <>
       <Card>
-        <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-          <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center mr-3">
-            <BarChart3 className="w-5 h-5 text-primary" />
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <div className="flex items-center">
+            <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center mr-3">
+              <BarChart3 className="w-5 h-5 text-primary" />
+            </div>
+            <CardTitle className="text-lg">Share of Voice</CardTitle>
           </div>
-          <CardTitle className="text-lg">Share of Voice</CardTitle>
+          {brandId && (
+            <Button
+              onClick={() => setShowAddCompetitor(true)}
+              variant="outline"
+              size="sm"
+              className="border-primary text-primary hover:bg-primary hover:text-white"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Competitor
+            </Button>
+          )}
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Summary */}
@@ -219,6 +359,7 @@ const ShareOfVoiceTable = ({
                     <TableHead className="text-sm">Mentions</TableHead>
                     <TableHead className="text-sm">Share (%)</TableHead>
                     <TableHead className="text-sm">Status</TableHead>
+                    <TableHead className="text-sm w-16">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -259,6 +400,24 @@ const ShareOfVoiceTable = ({
                           <Badge variant="outline" className="text-green-600 border-green-200 text-xs">Active</Badge>
                         ) : (
                           <Badge variant="outline" className="text-muted-foreground text-xs">No mentions</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {/* Only show delete button for competitors (not the brand itself) */}
+                        {item.name !== brandName && item.name !== (brandName || 'Your Brand') && (
+                          <Button
+                            onClick={() => handleDeleteClick(item.name)}
+                            variant="ghost"
+                            size="sm"
+                            className="p-1 h-auto text-red-500 hover:text-red-700 hover:bg-red-50"
+                            disabled={deletingCompetitor === item.name}
+                          >
+                            {deletingCompetitor === item.name ? (
+                              <div className="w-3 h-3 border border-red-500 border-t-transparent rounded-full animate-spin"></div>
+                            ) : (
+                              <Trash2 className="w-3 h-3" />
+                            )}
+                          </Button>
                         )}
                       </TableCell>
                     </TableRow>
@@ -411,6 +570,151 @@ const ShareOfVoiceTable = ({
                   )}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Competitor Modal */}
+      {showAddCompetitor && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Add New Competitor</h3>
+              <Button
+                onClick={handleCloseModal}
+                variant="ghost"
+                size="sm"
+                className="p-1 h-auto"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            
+            <form onSubmit={handleAddCompetitor} className="space-y-4">
+              <div>
+                <label htmlFor="competitorName" className="block text-sm font-medium text-gray-700 mb-2">
+                  Competitor Name
+                </label>
+                <input
+                  id="competitorName"
+                  type="text"
+                  value={newCompetitorName}
+                  onChange={(e) => setNewCompetitorName(e.target.value)}
+                  placeholder="Enter competitor name (e.g., Amazon, Google)"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                  required
+                  minLength={2}
+                  maxLength={50}
+                  disabled={addingCompetitor}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Enter the name as it would appear in AI responses
+                </p>
+              </div>
+
+              {addCompetitorError && (
+                <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                  <p className="text-sm text-red-800">{addCompetitorError}</p>
+                </div>
+              )}
+
+              <div className="flex justify-end space-x-3 pt-4">
+                <Button
+                  type="button"
+                  onClick={handleCloseModal}
+                  variant="outline"
+                  disabled={addingCompetitor}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={addingCompetitor || !newCompetitorName.trim()}
+                  className="bg-primary hover:bg-primary/90 text-white"
+                >
+                  {addingCompetitor ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                      Adding...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Competitor
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Competitor Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Delete Competitor</h3>
+              <Button
+                onClick={handleCancelDelete}
+                variant="ghost"
+                size="sm"
+                className="p-1 h-auto"
+                disabled={deletingCompetitor}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                  <Trash2 className="w-5 h-5 text-red-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">
+                    Are you sure you want to delete this competitor?
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    Competitor: <span className="font-medium">{competitorToDelete}</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                <p className="text-xs text-yellow-800">
+                  <strong>Warning:</strong> This will permanently remove the competitor and recalculate your Share of Voice percentages.
+                </p>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4">
+                <Button
+                  onClick={handleCancelDelete}
+                  variant="outline"
+                  disabled={deletingCompetitor}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleDeleteCompetitor}
+                  disabled={deletingCompetitor}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  {deletingCompetitor ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete Competitor
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         </div>

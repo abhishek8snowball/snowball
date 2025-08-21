@@ -118,6 +118,8 @@ export const apiService = {
   
   // Custom Prompts
   addCustomPrompt: (data) => api.post('/api/v1/brand/prompts/custom', data),
+  addCompetitor: (brandId, data) => api.post(`/api/v1/brand/${brandId}/competitors`, data),
+  deleteCompetitor: (brandId, competitorName) => api.delete(`/api/v1/brand/${brandId}/competitors/${encodeURIComponent(competitorName)}`),
   enhancePrompt: (data) => api.post('/api/v1/brand/prompts/enhance', data),
   generateCustomResponse: (promptId) => api.post(`/api/v1/brand/prompts/${promptId}/generate`, {}, {
     timeout: 180000, // 3 minutes timeout for custom response generation

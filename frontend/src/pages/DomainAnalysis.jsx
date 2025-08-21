@@ -410,6 +410,39 @@ const DomainAnalysis = ({ onClose, initialDomain = "" }) => {
     onClose();
   };
 
+  // Function to refresh SOV data after competitor addition
+  const refreshSOVData = async () => {
+    if (!result || !result.brandId) {
+      console.log('❌ No brandId available for SOV refresh');
+      return;
+    }
+    
+    try {
+      console.log('🔄 Refreshing SOV data for brandId:', result.brandId);
+      
+      // Refetch the brand analysis to get updated SOV data
+      const analysisResponse = await apiService.getBrandAnalysis(result.brandId);
+      console.log('✅ SOV data refreshed:', analysisResponse.data);
+      
+      // Update the result with new SOV data
+      setResult(prevResult => ({
+        ...prevResult,
+        shareOfVoice: analysisResponse.data.shareOfVoice,
+        mentionCounts: analysisResponse.data.mentionCounts,
+        totalMentions: analysisResponse.data.totalMentions,
+        brandShare: analysisResponse.data.brandShare,
+        aiVisibilityScore: analysisResponse.data.aiVisibilityScore,
+        competitors: analysisResponse.data.competitors // Update competitors list too
+      }));
+      
+      console.log('✅ SOV table data updated successfully');
+      
+    } catch (error) {
+      console.error('❌ Error refreshing SOV data:', error);
+      toast.error('Failed to refresh data. Please refresh the page.');
+    }
+  };
+
   const formatTime = (seconds) => {
     if (seconds < 60) return `${seconds}s`;
     const minutes = Math.floor(seconds / 60);
@@ -670,6 +703,7 @@ const DomainAnalysis = ({ onClose, initialDomain = "" }) => {
                 brandId={result.brandId}
                 brandName={result.brand}
                 calculationMethod={result.calculationMethod}
+                onDataUpdate={refreshSOVData}
               />
             </div>
           </div>

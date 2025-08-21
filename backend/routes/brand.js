@@ -43,6 +43,12 @@ router.post("/create-minimal-brand", auth, brandController.createMinimalBrand);
 // Extract categories from AI (without saving to database)
 router.post("/extract-categories", auth, brandController.extractCategories);
 
+// Add competitor to brand
+router.post("/:brandId/competitors", auth, brandController.addCompetitor);
+
+// Delete competitor from brand
+router.delete("/:brandId/competitors/:competitorName", auth, brandController.deleteCompetitor);
+
 // Mention extraction and analysis endpoints
 router.post("/:brandId/mentions/process", auth, mentionController.processBrandMentions);
 router.get("/:brandId/mentions/companies", auth, mentionController.getUniqueCompanies);

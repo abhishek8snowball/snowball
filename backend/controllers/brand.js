@@ -410,6 +410,302 @@ exports.extractCategories = async (req, res) => {
   }
 };
 
+// Add competitor to brand with safety validation
+exports.addCompetitor = async (req, res) => {
+  try {
+    const { brandId } = req.params;
+    const { competitorName } = req.body;
+    const userId = req.user.id;
+    
+    console.log(`🏢 Adding competitor for brand: ${brandId}, user: ${userId}`);
+    console.log(`🆔 Competitor name: "${competitorName}"`);
+    
+    // 1. Validate brand ownership
+    const { validateBrandOwnership } = require("../utils/brandValidation");
+    const brand = await validateBrandOwnership(userId, brandId);
+    
+    if (!brand) {
+      console.log(`❌ Brand ownership validation failed for user ${userId}, brand ${brandId}`);
+      return res.status(403).json({ msg: "Access denied: You don't have permission to modify this brand" });
+    }
+    
+    // 2. Input validation
+    if (!competitorName || typeof competitorName !== 'string' || competitorName.trim().length < 2) {
+      console.log(`❌ Invalid competitor name: "${competitorName}"`);
+      return res.status(400).json({ msg: "Valid competitor name required (minimum 2 characters)" });
+    }
+    
+    const sanitizedName = competitorName.trim();
+    console.log(`🧹 Sanitized competitor name: "${sanitizedName}"`);
+    
+    // 3. Duplicate prevention
+    if (brand.competitors && brand.competitors.includes(sanitizedName)) {
+      console.log(`❌ Competitor already exists: "${sanitizedName}"`);
+      return res.status(400).json({ msg: `Competitor "${sanitizedName}" already exists` });
+    }
+    
+    // 4. Rate limiting (max 15 competitors)
+    const currentCompetitorCount = brand.competitors ? brand.competitors.length : 0;
+    if (currentCompetitorCount >= 15) {
+      console.log(`❌ Maximum competitors reached: ${currentCompetitorCount}/15`);
+      return res.status(400).json({ msg: "Maximum 15 competitors allowed per brand" });
+    }
+    
+    // 5. Update brand with new competitor
+    console.log(`📝 Adding competitor to brand. Current count: ${currentCompetitorCount}`);
+    
+    if (!brand.competitors) {
+      brand.competitors = [];
+    }
+    brand.competitors.push(sanitizedName);
+    await brand.save();
+    
+    console.log(`✅ Competitor added to brand. New count: ${brand.competitors.length}`);
+    console.log(`📋 Updated competitors list:`, brand.competitors);
+    
+    // 6. Recalculate SOV with new competitor
+    console.log(`🔄 Recalculating Share of Voice with new competitor...`);
+    
+    try {
+      // Get existing data for SOV recalculation
+      const BrandCategory = require("../models/BrandCategory");
+      const CategorySearchPrompt = require("../models/CategorySearchPrompt");
+      const PromptAIResponse = require("../models/PromptAIResponse");
+      
+      // Get user's categories
+      const userCategories = await BrandCategory.find({ brandId: brand._id });
+      const userCategoryIds = userCategories.map(cat => cat._id);
+      
+      // Get user's prompts and responses
+      const userPrompts = await CategorySearchPrompt.find({ 
+        categoryId: { $in: userCategoryIds } 
+      });
+      const userPromptIds = userPrompts.map(prompt => prompt._id);
+      
+      const userAIResponses = await PromptAIResponse.find({ 
+        promptId: { $in: userPromptIds } 
+      }).populate('promptId');
+
+      // Build responses array for SOV calculation
+      const userResponses = [];
+      for (const response of userAIResponses) {
+        if (response.promptId) {
+          const categoryDoc = userCategories.find(cat => 
+            cat._id.toString() === response.promptId.categoryId.toString()
+          );
+          if (categoryDoc) {
+            userResponses.push({
+              aiDoc: response,
+              catDoc: categoryDoc
+            });
+          }
+        }
+      }
+
+      console.log(`📊 Recalculating SOV with ${userResponses.length} responses and ${brand.competitors.length} competitors`);
+
+      // Prepare brand object for SOV calculation
+      const brandForSOV = {
+        _id: brand._id,
+        brandName: brand.brandName,
+        domain: brand.domain,
+        userId: brand.ownerUserId,
+        ownerUserId: brand.ownerUserId,
+        competitors: brand.competitors // Now includes new competitor
+      };
+
+      // Recalculate SOV
+      const { calculateShareOfVoice } = require('./brand/shareOfVoice');
+      const sovResult = await calculateShareOfVoice(
+        brandForSOV,
+        brandForSOV.competitors,
+        userResponses,
+        userCategories[0]?._id, // Use first category as reference
+        `competitor_add_${Date.now()}` // New analysis session for this update
+      );
+      
+      console.log(`✅ SOV recalculated successfully`);
+      console.log(`📊 SOV results:`, sovResult);
+
+      // Return success response with updated data
+      res.json({
+        success: true,
+        message: `Competitor "${sanitizedName}" added successfully`,
+        competitor: sanitizedName,
+        totalCompetitors: brand.competitors.length,
+        competitors: brand.competitors,
+        shareOfVoice: sovResult
+      });
+
+    } catch (sovError) {
+      console.error(`❌ Error recalculating SOV:`, sovError);
+      
+      // Rollback competitor addition on SOV calculation failure
+      console.log(`🔄 Rolling back competitor addition due to SOV calculation error...`);
+      brand.competitors = brand.competitors.filter(comp => comp !== sanitizedName);
+      await brand.save();
+      
+      return res.status(500).json({ 
+        msg: "Competitor added but SOV calculation failed. Changes rolled back.", 
+        error: sovError.message 
+      });
+    }
+    
+  } catch (error) {
+    console.error("❌ Error adding competitor:", error);
+    res.status(500).json({ 
+      msg: "Failed to add competitor", 
+      error: error.message 
+    });
+  }
+};
+
+// Delete competitor from brand with safety validation
+exports.deleteCompetitor = async (req, res) => {
+  try {
+    const { brandId, competitorName } = req.params;
+    const userId = req.user.id;
+    
+    console.log(`🗑️ Deleting competitor from brand: ${brandId}, user: ${userId}`);
+    console.log(`🆔 Competitor to delete: "${competitorName}"`);
+    
+    // 1. Validate brand ownership
+    const { validateBrandOwnership } = require("../utils/brandValidation");
+    const brand = await validateBrandOwnership(userId, brandId);
+    
+    if (!brand) {
+      console.log(`❌ Brand ownership validation failed for user ${userId}, brand ${brandId}`);
+      return res.status(403).json({ msg: "Access denied: You don't have permission to modify this brand" });
+    }
+    
+    // 2. Input validation
+    if (!competitorName || typeof competitorName !== 'string' || competitorName.trim().length < 1) {
+      console.log(`❌ Invalid competitor name: "${competitorName}"`);
+      return res.status(400).json({ msg: "Valid competitor name required for deletion" });
+    }
+    
+    const sanitizedName = decodeURIComponent(competitorName.trim());
+    console.log(`🧹 Sanitized competitor name to delete: "${sanitizedName}"`);
+    
+    // 3. Check if competitor exists
+    if (!brand.competitors || !brand.competitors.includes(sanitizedName)) {
+      console.log(`❌ Competitor not found: "${sanitizedName}"`);
+      console.log(`📋 Current competitors:`, brand.competitors);
+      return res.status(404).json({ msg: `Competitor "${sanitizedName}" not found` });
+    }
+    
+    // 4. Prevent deletion if it's the last competitor (optional business rule)
+    if (brand.competitors.length <= 1) {
+      console.log(`❌ Cannot delete last competitor: "${sanitizedName}"`);
+      return res.status(400).json({ msg: "Cannot delete the last competitor. At least one competitor is required for SOV analysis." });
+    }
+    
+    // 5. Remove competitor from brand
+    console.log(`📝 Removing competitor from brand. Current count: ${brand.competitors.length}`);
+    
+    brand.competitors = brand.competitors.filter(comp => comp !== sanitizedName);
+    await brand.save();
+    
+    console.log(`✅ Competitor removed from brand. New count: ${brand.competitors.length}`);
+    console.log(`📋 Updated competitors list:`, brand.competitors);
+    
+    // 6. Recalculate SOV without the deleted competitor
+    console.log(`🔄 Recalculating Share of Voice without deleted competitor...`);
+    
+    try {
+      // Get existing data for SOV recalculation
+      const BrandCategory = require("../models/BrandCategory");
+      const CategorySearchPrompt = require("../models/CategorySearchPrompt");
+      const PromptAIResponse = require("../models/PromptAIResponse");
+      
+      // Get user's categories
+      const userCategories = await BrandCategory.find({ brandId: brand._id });
+      const userCategoryIds = userCategories.map(cat => cat._id);
+      
+      // Get user's prompts and responses
+      const userPrompts = await CategorySearchPrompt.find({ 
+        categoryId: { $in: userCategoryIds } 
+      });
+      const userPromptIds = userPrompts.map(prompt => prompt._id);
+      
+      const userAIResponses = await PromptAIResponse.find({ 
+        promptId: { $in: userPromptIds } 
+      }).populate('promptId');
+
+      // Build responses array for SOV calculation
+      const userResponses = [];
+      for (const response of userAIResponses) {
+        if (response.promptId) {
+          const categoryDoc = userCategories.find(cat => 
+            cat._id.toString() === response.promptId.categoryId.toString()
+          );
+          if (categoryDoc) {
+            userResponses.push({
+              aiDoc: response,
+              catDoc: categoryDoc
+            });
+          }
+        }
+      }
+
+      console.log(`📊 Recalculating SOV with ${userResponses.length} responses and ${brand.competitors.length} competitors`);
+
+      // Prepare brand object for SOV calculation
+      const brandForSOV = {
+        _id: brand._id,
+        brandName: brand.brandName,
+        domain: brand.domain,
+        userId: brand.ownerUserId,
+        ownerUserId: brand.ownerUserId,
+        competitors: brand.competitors // Now excludes deleted competitor
+      };
+
+      // Recalculate SOV
+      const { calculateShareOfVoice } = require('./brand/shareOfVoice');
+      const sovResult = await calculateShareOfVoice(
+        brandForSOV,
+        brandForSOV.competitors,
+        userResponses,
+        userCategories[0]?._id, // Use first category as reference
+        `competitor_delete_${Date.now()}` // New analysis session for this update
+      );
+      
+      console.log(`✅ SOV recalculated successfully after competitor deletion`);
+      console.log(`📊 SOV results:`, sovResult);
+
+      // Return success response with updated data
+      res.json({
+        success: true,
+        message: `Competitor "${sanitizedName}" deleted successfully`,
+        deletedCompetitor: sanitizedName,
+        totalCompetitors: brand.competitors.length,
+        competitors: brand.competitors,
+        shareOfVoice: sovResult
+      });
+
+    } catch (sovError) {
+      console.error(`❌ Error recalculating SOV after deletion:`, sovError);
+      
+      // Rollback competitor deletion on SOV calculation failure
+      console.log(`🔄 Rolling back competitor deletion due to SOV calculation error...`);
+      brand.competitors.push(sanitizedName);
+      await brand.save();
+      
+      return res.status(500).json({ 
+        msg: "Competitor deletion failed during SOV recalculation. Changes rolled back.", 
+        error: sovError.message 
+      });
+    }
+    
+  } catch (error) {
+    console.error("❌ Error deleting competitor:", error);
+    res.status(500).json({ 
+      msg: "Failed to delete competitor", 
+      error: error.message 
+    });
+  }
+};
+
 // Generate custom response - isolated workflow for single prompt
 exports.generateCustomResponse = async (req, res) => {
   try {
