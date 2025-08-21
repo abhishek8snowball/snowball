@@ -18,6 +18,11 @@ router.get("/categories/:categoryId/prompts", auth, brandController.getCategoryP
 // Prompt response endpoint
 router.get("/prompts/:promptId/response", auth, brandController.getPromptResponse);
 
+// Custom prompt endpoints
+router.post("/prompts/custom", auth, brandController.addCustomPrompt);
+router.post("/prompts/enhance", auth, brandController.enhancePrompt);
+router.post("/prompts/:promptId/generate", auth, brandController.generateCustomResponse);
+
 // Debug endpoint
 router.get("/debug/ai-responses", auth, brandController.debugAIResponses);
 
@@ -34,6 +39,9 @@ router.post("/:brandId/trigger-blog-analysis", auth, brandController.triggerBlog
 
 // Create minimal brand profile for blog analysis (without full analysis)
 router.post("/create-minimal-brand", auth, brandController.createMinimalBrand);
+
+// Extract categories from AI (without saving to database)
+router.post("/extract-categories", auth, brandController.extractCategories);
 
 // Mention extraction and analysis endpoints
 router.post("/:brandId/mentions/process", auth, mentionController.processBrandMentions);

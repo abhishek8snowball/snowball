@@ -21,7 +21,8 @@ const Step2Categories = ({ onComplete, loading, error, progress }) => {
     try {
       setIsExtracting(true);
       
-      const response = await apiService.step2Categories({});
+      // Only extract categories from AI, don't save to database yet
+      const response = await apiService.extractCategories({});
       
       if (response.data.success) {
         setCategories(response.data.categories);

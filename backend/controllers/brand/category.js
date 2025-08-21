@@ -110,9 +110,28 @@ exports.saveCategories = async (brand, categories) => {
   const BrandCategory = require("../../models/BrandCategory");
   const catDocs = [];
   for (const cat of categories) {
-    let catDoc = await BrandCategory.create({ brandId: brand._id, categoryName: cat });
+    // Check if category already exists for this brand to prevent duplicates
+    let catDoc = await BrandCategory.findOne({ 
+      brandId: brand._id, 
+      categoryName: cat 
+    });
+    
+    if (catDoc) {
+      console.log("BrandCategory already exists:", {
+        id: catDoc._id,
+        brandId: catDoc.brandId,
+        categoryName: catDoc.categoryName
+      });
+    } else {
+      catDoc = await BrandCategory.create({ brandId: brand._id, categoryName: cat });
+      console.log("BrandCategory created:", {
+        id: catDoc._id,
+        brandId: catDoc.brandId,
+        categoryName: catDoc.categoryName
+      });
+    }
+    
     catDocs.push(catDoc);
-    console.log("BrandCategory created:", catDoc);
   }
   return catDocs;
 };

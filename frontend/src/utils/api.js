@@ -85,7 +85,8 @@ export const apiService = {
   getOnboardingProgress: () => api.get('/api/v1/onboarding/progress'),
   saveOnboardingProgress: (data) => api.post('/api/v1/onboarding/save-progress', data),
   step1DomainAnalysis: (data) => api.post('/api/v1/onboarding/step1-domain', data),
-  step2Categories: (data) => api.post('/api/v1/onboarding/step2-categories', data),
+  extractCategories: (data) => api.post('/api/v1/brand/extract-categories', data), // Extract categories only, don't save
+  step2Categories: (data) => api.post('/api/v1/onboarding/step2-categories', data), // Save categories to DB
   step3Competitors: (data) => api.post('/api/v1/onboarding/step3-competitors', data),
   step4Prompts: (data) => api.post('/api/v1/onboarding/step4-prompts', data),
   completeOnboarding: () => api.post('/api/v1/onboarding/complete', {}, {
@@ -114,6 +115,13 @@ export const apiService = {
   // Categories and Prompts
   getCategoryPrompts: (categoryId) => api.get(`/api/v1/brand/categories/${categoryId}/prompts`),
   getPromptResponse: (promptId) => api.get(`/api/v1/brand/prompts/${promptId}/response`),
+  
+  // Custom Prompts
+  addCustomPrompt: (data) => api.post('/api/v1/brand/prompts/custom', data),
+  enhancePrompt: (data) => api.post('/api/v1/brand/prompts/enhance', data),
+  generateCustomResponse: (promptId) => api.post(`/api/v1/brand/prompts/${promptId}/generate`, {}, {
+    timeout: 180000, // 3 minutes timeout for custom response generation
+  }),
   
   // Content Calendar
   generateContentCalendar: (data) => api.post('/api/v1/content-calendar/generate', data),

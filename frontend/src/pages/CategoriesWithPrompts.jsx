@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { ChevronDown, ChevronRight, MessageSquare, Sparkles, Clock } from 'lucide-react';
+import AddCustomPrompt from '../components/AddCustomPrompt';
 
 const CategoriesWithPrompts = ({ categories, brandId }) => {
   const [categoryPrompts, setCategoryPrompts] = useState({});
@@ -253,6 +254,16 @@ const CategoriesWithPrompts = ({ categories, brandId }) => {
     });
   };
 
+  const handleCustomPromptAdded = (responseData) => {
+    console.log('🎉 Custom prompt added successfully:', responseData);
+    
+    // Refresh the category prompts data
+    fetchCategoryPrompts();
+    
+    // Optionally show a success message
+    console.log('✅ Data refreshed after custom prompt addition');
+  };
+
   if (!categories || categories.length === 0) {
     return (
       <Card>
@@ -275,6 +286,10 @@ const CategoriesWithPrompts = ({ categories, brandId }) => {
             <Badge variant="outline" className="text-xs">
               {categories.length} categories
             </Badge>
+            <AddCustomPrompt 
+              categories={categories}
+              onPromptAdded={handleCustomPromptAdded}
+            />
             <Button
               variant="ghost"
               size="sm"

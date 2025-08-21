@@ -46,10 +46,14 @@ exports.validateCategoryOwnership = async (userId, categoryId) => {
       return null;
     }
 
-    if (category.brandId.ownerUserId.toString() !== userId.toString()) {
-      console.log(`❌ Category ownership validation failed: User ${userId} does not own category ${categoryId}`);
-      console.log(`🔍 Debug - Expected userId: ${userId} (${typeof userId})`);
-      console.log(`🔍 Debug - Actual ownerUserId: ${category.brandId.ownerUserId} (${typeof category.brandId.ownerUserId})`);
+    // Convert both to strings to handle ObjectId comparison properly
+    const userIdString = userId.toString();
+    const ownerUserIdString = category.brandId.ownerUserId.toString();
+    
+    if (ownerUserIdString !== userIdString) {
+      console.log(`❌ Category ownership validation failed: User ${userIdString} does not own category ${categoryId}`);
+      console.log(`🔍 Debug - Expected userId: ${userIdString} (${typeof userId})`);
+      console.log(`🔍 Debug - Actual ownerUserId: ${ownerUserIdString} (${typeof category.brandId.ownerUserId})`);
       return null;
     }
 

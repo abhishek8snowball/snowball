@@ -149,130 +149,63 @@ exports.calculateShareOfVoice = async function(brand, competitors, aiResponses, 
     let aiVisibilityScore = 0;
     
     try {
-      // ✅ STEP 1: Get total count of ALL company mentions for the current domain analysis
-      // Priority: 1) Current analysis session, 2) Current category, 3) Recent mentions only (24h)
+      // ✅ STEP 1: Get total count of ALL company mentions for the user (CUMULATIVE APPROACH)
+      // This includes mentions from ALL analysis sessions for this user/brand
       let totalMentionsResult;
-      let dataSource = 'unknown';
+      let dataSource = 'all_mentions_cumulative';
       
-      // First try: Get mentions from current analysis session
-      if (analysisSessionId) {
-        console.log(`🔍 QUERY 1: Searching for mentions with analysisSessionId: ${analysisSessionId}`);
-        console.log(`🔍 User ID: ${brand.userId}, Brand ID: ${brand._id}`);
-        
-        const query1 = {
-          $match: {
-            userId: brand.userId,
-            analysisSessionId: analysisSessionId
-          }
-        };
-        console.log(`📝 Query 1 details:`, JSON.stringify(query1, null, 2));
-        
-        // ✅ ADDITIONAL DEBUG: Check if any mentions exist with this analysisSessionId at all
-        const debugMentions = await CategoryPromptMention.find({
-          analysisSessionId: analysisSessionId
-        });
-        console.log(`🔍 DEBUG: Found ${debugMentions.length} total mentions with analysisSessionId: ${analysisSessionId}`);
-        if (debugMentions.length > 0) {
-          console.log(`🔍 DEBUG: Sample mention:`, {
-            id: debugMentions[0]._id,
-            companyName: debugMentions[0].companyName,
-            userId: debugMentions[0].userId,
-            brandId: debugMentions[0].brandId
-          });
-        }
-        
-        totalMentionsResult = await CategoryPromptMention.aggregate([
-          query1,
-          {
-            $group: {
-              _id: null,
-              totalMentions: { $sum: 1 }
-            }
-          }
-        ]);
-        
-        console.log(`📊 Query 1 result:`, totalMentionsResult);
-        
-        if (totalMentionsResult && totalMentionsResult.length > 0 && totalMentionsResult[0].totalMentions > 0) {
-          console.log(`✅ Found ${totalMentionsResult[0].totalMentions} mentions in current analysis session`);
-          dataSource = 'current_analysis_session';
-        } else {
-          console.log(`❌ Query 1 returned no results or 0 mentions`);
-        }
-      }
+      // Get ALL mentions for this user (cumulative across all analysis sessions)
+      console.log(`🔍 CUMULATIVE QUERY: Getting all mentions for userId: ${brand.userId}`);
+      console.log(`🔍 User ID: ${brand.userId}, Brand ID: ${brand._id}`);
       
-      // Second try: Get mentions from current category if no session-specific data
-      if (!totalMentionsResult || totalMentionsResult.length === 0 || totalMentionsResult[0].totalMentions === 0) {
-        if (categoryId) {
-          console.log(`🔄 QUERY 2: Searching for mentions with categoryId: ${categoryId}`);
-          const query2 = {
-            $match: {
-              userId: brand.userId,
-              categoryId: categoryId
-            }
-          };
-          console.log(`📝 Query 2 details:`, JSON.stringify(query2, null, 2));
-          
-          totalMentionsResult = await CategoryPromptMention.aggregate([
-            query2,
-            {
-              $group: {
-                _id: null,
-                totalMentions: { $sum: 1 }
-              }
-            }
-          ]);
-          
-          console.log(`📊 Query 2 result:`, totalMentionsResult);
-          
-          if (totalMentionsResult && totalMentionsResult.length > 0 && totalMentionsResult[0].totalMentions > 0) {
-            console.log(`✅ Found ${totalMentionsResult[0].totalMentions} mentions in current category`);
-            dataSource = 'current_category';
-          } else {
-            console.log(`❌ Query 2 returned no results or 0 mentions`);
-          }
+      const cumulativeQuery = {
+        $match: {
+          userId: brand.userId,
+          brandId: brand._id
         }
-      }
+      };
+      console.log(`📝 Cumulative query details:`, JSON.stringify(cumulativeQuery, null, 2));
       
-      // Third try: Get recent mentions for user if no category-specific data (LIMITED TO RECENT)
-      if (!totalMentionsResult || totalMentionsResult.length === 0 || totalMentionsResult[0].totalMentions === 0) {
-        console.log(`🔄 QUERY 3: Searching for recent mentions (last 24 hours) for userId: ${brand.userId}`);
-        const query3 = {
-          $match: {
-            userId: brand.userId,
-            createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }  // Last 24 hours only
+      // ✅ DEBUG: Show breakdown by analysis session
+      const debugSessions = await CategoryPromptMention.aggregate([
+        cumulativeQuery,
+        {
+          $group: {
+            _id: '$analysisSessionId',
+            mentionCount: { $sum: 1 },
+            companies: { $addToSet: '$companyName' }
           }
-        };
-        console.log(`📝 Query 3 details:`, JSON.stringify(query3, null, 2));
-        
-        totalMentionsResult = await CategoryPromptMention.aggregate([
-          query3,
-          {
-            $group: {
-              _id: null,
-              totalMentions: { $sum: 1 }
-            }
-          }
-        ]);
-        
-        console.log(`📊 Query 3 result:`, totalMentionsResult);
-        
-        if (totalMentionsResult && totalMentionsResult.length > 0) {
-          console.log(`✅ Found ${totalMentionsResult[0].totalMentions} recent mentions for user (last 24 hours)`);
-          dataSource = 'recent_mentions_24h';
-        } else {
-          console.log(`❌ Query 3 returned no results`);
+        },
+        {
+          $sort: { mentionCount: -1 }
         }
-      }
+      ]);
+      
+      console.log(`🔍 DEBUG: Mentions by analysis session:`);
+      debugSessions.forEach(session => {
+        console.log(`   Session: ${session._id} - ${session.mentionCount} mentions - Companies: [${session.companies.join(', ')}]`);
+      });
+      
+      totalMentionsResult = await CategoryPromptMention.aggregate([
+        cumulativeQuery,
+        {
+          $group: {
+            _id: null,
+            totalMentions: { $sum: 1 }
+          }
+        }
+      ]);
+      
+      console.log(`📊 Cumulative query result:`, totalMentionsResult);
       
       totalMentions = totalMentionsResult && totalMentionsResult.length > 0 ? totalMentionsResult[0].totalMentions : 0;
-      console.log(`📊 Total mentions found: ${totalMentions} (Source: ${dataSource})`);
+      console.log(`📊 Total cumulative mentions found: ${totalMentions} (Source: ${dataSource})`);
       
-      // ✅ IMPORTANT: If we're not using current analysis session, show warning
-      if (dataSource !== 'current_analysis_session') {
-        console.log(`⚠️ WARNING: Using ${dataSource} instead of current analysis session`);
-        console.log(`⚠️ This may include mentions from previous analyses`);
-        console.log(`⚠️ For complete isolation, ensure analysisSessionId is properly set`);
+      console.log(`✅ Using CUMULATIVE approach - all mentions from all analysis sessions included`);
+      console.log(`✅ This ensures new custom prompt mentions are added to existing SOV calculation`);
+      
+      if (analysisSessionId) {
+        console.log(`ℹ️ Analysis session ID ${analysisSessionId} provided but using cumulative data for SOV`);
       }
       
       if (totalMentions === 0) {
@@ -330,119 +263,53 @@ exports.calculateShareOfVoice = async function(brand, competitors, aiResponses, 
         
         // Continue with saving and returning real zero values
       } else {
-        // ✅ STEP 2: Get mention count for each specific brand using the same logic as total mentions
+        // ✅ STEP 2: Get mention count for each specific brand using CUMULATIVE approach
         for (const brandName of allBrands) {
           console.log(`\n🔍 Processing brand: ${brandName}`);
-          let brandMentionsResult;
-          let brandDataSource = 'unknown';
           
-          // First try: Get mentions from current analysis session
-          if (analysisSessionId) {
-            console.log(`🔍 BRAND QUERY 1: Searching for ${brandName} with analysisSessionId: ${analysisSessionId}`);
-            const brandQuery1 = {
-              $match: {
-                userId: brand.userId,
-                analysisSessionId: analysisSessionId,
-                companyName: { $regex: new RegExp(brandName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }
-              }
-            };
-            console.log(`📝 Brand Query 1 details:`, JSON.stringify(brandQuery1, null, 2));
-            
-            brandMentionsResult = await CategoryPromptMention.aggregate([
-              brandQuery1,
-              {
-                $group: {
-                  _id: null,
-                  brandMentions: { $sum: 1 }
-                }
-              }
-            ]);
-            
-            console.log(`📊 Brand Query 1 result for ${brandName}:`, brandMentionsResult);
-            
-            if (brandMentionsResult && brandMentionsResult.length > 0 && brandMentionsResult[0].brandMentions > 0) {
-              console.log(`✅ Found ${brandMentionsResult[0].brandMentions} mentions for ${brandName} in current analysis session`);
-              brandDataSource = 'current_analysis_session';
-            } else {
-              console.log(`❌ Brand Query 1 returned no results or 0 mentions for ${brandName}`);
+          // Use same cumulative query as total mentions (consistent data source)
+          const brandCumulativeQuery = {
+            $match: {
+              userId: brand.userId,
+              brandId: brand._id,
+              companyName: { $regex: new RegExp(brandName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }
             }
-          }
+          };
+          console.log(`📝 Brand cumulative query details:`, JSON.stringify(brandCumulativeQuery, null, 2));
           
-          // Second try: Get mentions from current category if no session-specific data
-          if (!brandMentionsResult || brandMentionsResult.length === 0 || brandMentionsResult[0].brandMentions === 0) {
-            if (categoryId) {
-              console.log(`🔄 BRAND QUERY 2: Searching for ${brandName} with categoryId: ${categoryId}`);
-              const brandQuery2 = {
-                $match: {
-                  userId: brand.userId,
-                  categoryId: categoryId,
-                  companyName: { $regex: new RegExp(brandName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }
-                }
-              };
-              console.log(`📝 Brand Query 2 details:`, JSON.stringify(brandQuery2, null, 2));
-              
-              brandMentionsResult = await CategoryPromptMention.aggregate([
-                brandQuery2,
-                {
-                  $group: {
-                    _id: null,
-                    brandMentions: { $sum: 1 }
-                  }
-                }
-              ]);
-              
-              console.log(`📊 Brand Query 2 result for ${brandName}:`, brandMentionsResult);
-              
-              if (brandMentionsResult && brandMentionsResult.length > 0 && brandMentionsResult[0].brandMentions > 0) {
-                console.log(`✅ Found ${brandMentionsResult[0].brandMentions} mentions for ${brandName} in current category`);
-                brandDataSource = 'current_category';
-              } else {
-                console.log(`❌ Brand Query 2 returned no results or 0 mentions for ${brandName}`);
+          const brandMentionsResult = await CategoryPromptMention.aggregate([
+            brandCumulativeQuery,
+            {
+              $group: {
+                _id: null,
+                brandMentions: { $sum: 1 }
               }
             }
-          }
+          ]);
           
-          // Third try: Get recent mentions for user if no category-specific data (LIMITED TO RECENT)
-          if (!brandMentionsResult || brandMentionsResult.length === 0 || brandMentionsResult[0].brandMentions === 0) {
-            console.log(`🔄 BRAND QUERY 3: Searching for ${brandName} with recent mentions (last 24 hours)`);
-            const brandQuery3 = {
-              $match: {
-                userId: brand.userId,
-                companyName: { $regex: new RegExp(brandName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') },
-                createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }  // Last 24 hours only
-              }
-            };
-            console.log(`📝 Brand Query 3 details:`, JSON.stringify(brandQuery3, null, 2));
-            
-            brandMentionsResult = await CategoryPromptMention.aggregate([
-              brandQuery3,
-              {
-                $group: {
-                  _id: null,
-                  brandMentions: { $sum: 1 }
-                }
-              }
-            ]);
-            
-            console.log(`📊 Brand Query 3 result for ${brandName}:`, brandMentionsResult);
-            
-            if (brandMentionsResult && brandMentionsResult.length > 0) {
-              console.log(`✅ Found ${brandMentionsResult[0].brandMentions} recent mentions for ${brandName} (last 24 hours)`);
-              brandDataSource = 'recent_mentions_24h';
-            } else {
-              console.log(`❌ Brand Query 3 returned no results for ${brandName}`);
-            }
-          }
+          console.log(`📊 Brand cumulative result for ${brandName}:`, brandMentionsResult);
           
           const brandMentions = brandMentionsResult && brandMentionsResult.length > 0 ? brandMentionsResult[0].brandMentions : 0;
           mentionCounts[brandName] = brandMentions;
           
-          console.log(`🔍 ${brandName}: ${brandMentions} mentions (Source: ${brandDataSource})`);
+          console.log(`🔍 ${brandName}: ${brandMentions} mentions (Source: cumulative_all_sessions)`);
           
-          // ✅ IMPORTANT: If we're not using current analysis session, show warning
-          if (brandDataSource !== 'current_analysis_session') {
-            console.log(`⚠️ WARNING: ${brandName} mentions from ${brandDataSource} instead of current analysis session`);
-            console.log(`⚠️ This may include mentions from previous analyses`);
+          // ✅ DEBUG: Show which sessions contributed to this brand's mentions
+          if (brandMentions > 0) {
+            const sessionBreakdown = await CategoryPromptMention.aggregate([
+              brandCumulativeQuery,
+              {
+                $group: {
+                  _id: '$analysisSessionId',
+                  mentionCount: { $sum: 1 }
+                }
+              },
+              {
+                $sort: { mentionCount: -1 }
+              }
+            ]);
+            
+            console.log(`   📊 ${brandName} session breakdown:`, sessionBreakdown.map(s => `${s._id}: ${s.mentionCount}`).join(', '));
           }
         }
         
@@ -467,7 +334,7 @@ exports.calculateShareOfVoice = async function(brand, competitors, aiResponses, 
           }
         });
         
-        console.log(`\n✅ SOV calculation complete using new formula (analysis-specific)`);
+        console.log(`\n✅ SOV calculation complete using CUMULATIVE formula (all sessions included)`);
         console.log(`📊 Final results:`, {
           totalMentions,
           mentionCounts,
@@ -499,7 +366,7 @@ exports.calculateShareOfVoice = async function(brand, competitors, aiResponses, 
         aiVisibilityScore: aiVisibilityScore,
         shareOfVoice: shareOfVoice,
         mentionCounts: mentionCounts,
-        calculationMethod: 'new_simplified_formula',
+        calculationMethod: 'cumulative_all_sessions',
         createdAt: new Date()
       };
       
@@ -521,7 +388,7 @@ exports.calculateShareOfVoice = async function(brand, competitors, aiResponses, 
       brandShare,
       aiVisibilityScore,
       analysisSessionId,  // Include which analysis session this belongs to
-      calculationMethod: 'new_simplified_formula'
+      calculationMethod: 'cumulative_all_sessions'
     };
     
   } catch (error) {
