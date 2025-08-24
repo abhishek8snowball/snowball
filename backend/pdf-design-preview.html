@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Design Preview - Improved Brand Analysis Report</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8f9ff;
+            color: #2d3142;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .title {
+            font-size: 32px;
+            font-weight: 600;
+            color: #2d3142;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 18px;
+            color: #7765e3;
+            font-weight: 500;
+        }
+        
+        .color-palette {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .color-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+            border: 2px solid #e4e7ff;
+        }
+        
+        .color-swatch {
+            width: 100%;
+            height: 60px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #e4e7ff;
+        }
+        
+        .color-name {
+            font-weight: 600;
+            color: #2d3142;
+            margin-bottom: 5px;
+        }
+        
+        .color-hex {
+            font-family: monospace;
+            color: #6b7280;
+            font-size: 14px;
+        }
+        
+        .design-section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+            border: 2px solid #e4e7ff;
+        }
+        
+        .section-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #2d3142;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #7765e3;
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .metric-card {
+            background: #f8f9ff;
+            border: 2px solid #e4e7ff;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .metric-value {
+            font-size: 24px;
+            font-weight: 600;
+            color: #7765e3;
+            margin-bottom: 5px;
+        }
+        
+        .metric-label {
+            font-size: 14px;
+            color: #6b7280;
+        }
+        
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        .table th {
+            background: #7765e3;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 500;
+        }
+        
+        .table td {
+            padding: 12px;
+            border-bottom: 1px solid #e4e7ff;
+        }
+        
+        .table tr:nth-child(even) {
+            background: #f8f9ff;
+        }
+        
+        .category-header {
+            background: #7765e3;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px 8px 0 0;
+            font-weight: 500;
+        }
+        
+        .prompt-section {
+            border: 2px solid #e4e7ff;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        
+        .prompt-header {
+            background: #f8f9ff;
+            border-bottom: 2px solid #e4e7ff;
+            padding: 12px 20px;
+            font-weight: 500;
+            color: #2d3142;
+        }
+        
+        .prompt-content {
+            padding: 20px;
+            color: #4a4a6a;
+        }
+        
+        .response-header {
+            background: #fff7ed;
+            border: 2px solid #f59e0b;
+            border-radius: 8px;
+            padding: 12px 20px;
+            margin: 15px 0;
+            font-weight: 500;
+            color: #f59e0b;
+        }
+        
+        .response-content {
+            padding: 20px;
+            background: white;
+            border: 2px solid #e4e7ff;
+            border-radius: 8px;
+            color: #2d3142;
+        }
+        
+        .competitor-summary {
+            background: #a4abff;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .competitor-summary h3 {
+            color: #2d3142;
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+        
+        .competitor-item {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 6px;
+            border-left: 4px solid #7765e3;
+        }
+        
+        .competitor-name {
+            color: #7765e3;
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 10px;
+            text-transform: capitalize;
+        }
+        
+        .prompt-list {
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+        }
+        
+        .prompt-list li {
+            color: #4a4a6a;
+            margin-bottom: 8px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        
+        .improvements {
+            background: linear-gradient(135deg, #f8f9ff 0%, #e4e7ff 100%);
+            border-radius: 12px;
+            padding: 30px;
+            margin-top: 30px;
+        }
+        
+        .improvements h2 {
+            color: #7765e3;
+            margin-bottom: 20px;
+        }
+        
+        .improvements ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .improvements li {
+            background: white;
+            margin-bottom: 10px;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #7765e3;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        
+        .improvements li:before {
+            content: "✅";
+            margin-right: 10px;
+            color: #10b981;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="title">Improved PDF Design Preview</h1>
+            <p class="subtitle">Brand Analysis Report - Enhanced Design System</p>
+        </div>
+        
+        <div class="design-section">
+            <h2 class="section-title">Color Palette</h2>
+            <div class="color-palette">
+                <div class="color-card">
+                    <div class="color-swatch" style="background: #7765e3;"></div>
+                    <div class="color-name">Primary</div>
+                    <div class="color-hex">#7765e3</div>
+                </div>
+                <div class="color-card">
+                    <div class="color-swatch" style="background: #a4abff;"></div>
+                    <div class="color-name">Primary Light</div>
+                    <div class="color-hex">#a4abff</div>
+                </div>
+                <div class="color-card">
+                    <div class="color-swatch" style="background: #2d3142;"></div>
+                    <div class="color-name">Text</div>
+                    <div class="color-hex">#2d3142</div>
+                </div>
+                <div class="color-card">
+                    <div class="color-swatch" style="background: #f8f9ff;"></div>
+                    <div class="color-name">Surface</div>
+                    <div class="color-hex">#f8f9ff</div>
+                </div>
+                <div class="color-card">
+                    <div class="color-swatch" style="background: #e4e7ff;"></div>
+                    <div class="color-name">Border</div>
+                    <div class="color-hex">#e4e7ff</div>
+                </div>
+                <div class="color-card">
+                    <div class="color-swatch" style="background: #10b981;"></div>
+                    <div class="color-name">Accent</div>
+                    <div class="color-hex">#10b981</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="design-section">
+            <h2 class="section-title">Executive Summary</h2>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value">75.5%</div>
+                    <div class="metric-label">AI Visibility Score</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">25.3%</div>
+                    <div class="metric-label">Brand Market Share</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">150</div>
+                    <div class="metric-label">Total Mentions</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">4</div>
+                    <div class="metric-label">Competitors Found</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="design-section">
+            <h2 class="section-title">Share of Voice Analysis</h2>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Brand/Competitor</th>
+                        <th>Share of Voice</th>
+                        <th>Mentions</th>
+                        <th>Rank</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Competitor A</td>
+                        <td>30.1%</td>
+                        <td>45</td>
+                        <td>★</td>
+                    </tr>
+                    <tr>
+                        <td>Test Brand</td>
+                        <td>25.3%</td>
+                        <td>38</td>
+                        <td>#2</td>
+                    </tr>
+                    <tr>
+                        <td>Competitor B</td>
+                        <td>22.5%</td>
+                        <td>34</td>
+                        <td>#3</td>
+                    </tr>
+                    <tr>
+                        <td>Competitor C</td>
+                        <td>15.2%</td>
+                        <td>23</td>
+                        <td>#4</td>
+                    </tr>
+                    <tr>
+                        <td>Competitor D</td>
+                        <td>6.9%</td>
+                        <td>10</td>
+                        <td>#5</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="design-section">
+            <h2 class="section-title">Detailed Category Analysis</h2>
+            <p style="color: #6b7280; margin-bottom: 20px;">Analysis across 2 business categories with AI-generated insights:</p>
+            
+            <div class="competitor-summary">
+                <h3>Competitor Mentions</h3>
+                <div class="competitor-item">
+                    <div class="competitor-name">apollo</div>
+                    <ul class="prompt-list">
+                        <li>• How can I find an AI-powered lead sourcing tool?</li>
+                        <li>• What CRM tools integrate with lead generation?</li>
+                    </ul>
+                </div>
+                
+                <div class="competitor-item">
+                    <div class="competitor-name">salesforce</div>
+                    <ul class="prompt-list">
+                        <li>• What CRM tools integrate with lead generation?</li>
+                    </ul>
+                </div>
+                
+                <div class="competitor-item">
+                    <div class="competitor-name">hubspot</div>
+                    <ul class="prompt-list">
+                        <li>• What CRM tools integrate with lead generation?</li>
+                    </ul>
+                </div>
+                
+                <div class="competitor-item">
+                    <div class="competitor-name">mailchimp</div>
+                    <ul class="prompt-list">
+                        <li>• Which email marketing platforms are best?</li>
+                    </ul>
+                </div>
+                
+                <div class="competitor-item">
+                    <div class="competitor-name">activecampaign</div>
+                    <ul class="prompt-list">
+                        <li>• Which email marketing platforms are best?</li>
+                    </ul>
+                </div>
+                
+                <div class="competitor-item">
+                    <div class="competitor-name">convertkit</div>
+                    <ul class="prompt-list">
+                        <li>• Which email marketing platforms are best?</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="prompt-section">
+                <div class="category-header">Category 1: ICP Lead Sourcing</div>
+                
+                <div class="prompt-header">Prompt 1</div>
+                <div class="prompt-content">
+                    How can I find an AI-powered lead sourcing tool?
+                </div>
+                
+                <div class="response-header">AI Response</div>
+                <div class="response-content">
+                    Apollo is excellent for lead sourcing. It provides AI-driven prospecting capabilities.
+                </div>
+            </div>
+            
+            <div class="prompt-section">
+                <div class="category-header">Category 1: ICP Lead Sourcing</div>
+                
+                <div class="prompt-header">Prompt 2</div>
+                <div class="prompt-content">
+                    What CRM tools integrate with lead generation?
+                </div>
+                
+                <div class="response-header">AI Response</div>
+                <div class="response-content">
+                    Salesforce and HubSpot both integrate well with lead generation tools like Apollo.
+                </div>
+            </div>
+            
+            <div class="prompt-section">
+                <div class="category-header">Category 2: Marketing Automation</div>
+                
+                <div class="prompt-header">Prompt 1</div>
+                <div class="prompt-content">
+                    Which email marketing platforms are best?
+                </div>
+                
+                <div class="response-header">AI Response</div>
+                <div class="response-content">
+                    Mailchimp and ActiveCampaign are popular choices. ConvertKit is also great for creators.
+                </div>
+            </div>
+        </div>
+        
+        <div class="improvements">
+            <h2>🎨 Design Improvements Made</h2>
+            <ul>
+                <li>Updated color scheme to match website theme (#7765e3 primary)</li>
+                <li>Enhanced visual hierarchy with better typography and spacing</li>
+                <li>Improved competitor mentions summary with dedicated section</li>
+                <li>Better contrast and readability throughout the document</li>
+                <li>Consistent use of brand colors for headers and accents</li>
+                <li>Enhanced competitor detection with expanded brand list</li>
+                <li>Improved table styling with alternating row colors</li>
+                <li>Better visual separation between sections</li>
+                <li>Enhanced prompt and response formatting</li>
+                <li>Professional footer and branding elements</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
