@@ -15,9 +15,15 @@ const OnboardingFlow = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
+  // Redirect super users to dashboard instead of onboarding
   useEffect(() => {
+    if (isSuperuser()) {
+      console.log('🔥 Super user detected - redirecting to dashboard instead of onboarding');
+      navigate('/dashboard');
+      return;
+    }
     loadUserProgress();
-  }, []);
+  }, [navigate]);
 
   const loadUserProgress = async () => {
     try {

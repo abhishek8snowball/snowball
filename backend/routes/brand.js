@@ -26,6 +26,9 @@ router.post("/prompts/:promptId/generate", auth, brandController.generateCustomR
 // Debug endpoint
 router.get("/debug/ai-responses", auth, brandController.debugAIResponses);
 
+// Super User endpoints
+router.get("/super-user/history", auth, brandController.getSuperUserHistory);
+
 // Blog analysis endpoints
 router.get("/:brandId/blogs", auth, brandController.getBlogAnalysis);
 router.post("/:brandId/blogs/score", auth, brandController.scoreSingleBlog);

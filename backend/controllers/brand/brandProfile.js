@@ -1,9 +1,44 @@
 const BrandProfile = require("../../models/BrandProfile");
 const { analyzeBrandVoice, updateBrandProfileWithVoice } = require("./brandVoiceAnalyzer");
 
-exports.findOrCreateBrandProfile = async ({ domain, brandName, userId }) => {
-  // First, check if user already has any brand profile
-  let existingBrand = await BrandProfile.findOne({ ownerUserId: userId.toString() });
+exports.findOrCreateBrandProfile = async ({ domain, brandName, userId, isAdminAnalysis, userRole }) => {
+  // Handle super user analysis differently
+  if (isAdminAnalysis && userRole === 'superuser') {
+    console.log("🔥 Super User Analysis - Creating/finding brand profile for admin analysis");
+    
+    // For super users, check if this specific domain has been analyzed before
+    let adminBrand = await BrandProfile.findOne({ 
+      domain: domain,
+      ownerUserId: userId.toString(),
+      isAdminAnalysis: true 
+    });
+    
+    if (adminBrand) {
+      console.log("✅ Super user - existing brand profile found for domain:", adminBrand);
+      return adminBrand;
+    } else {
+      console.log("🆕 Super user - creating new brand profile for domain analysis");
+      const newAdminBrand = await BrandProfile.create({ 
+        ownerUserId: userId.toString(), 
+        brandName: brandName || domain, 
+        domain,
+        isAdminAnalysis: true,
+        createdBy: userId.toString(),
+        description: `Super user analysis of ${domain}` 
+      });
+      console.log("✅ Super user - New admin BrandProfile created:", newAdminBrand);
+      return newAdminBrand;
+    }
+  }
+
+  // Regular user logic (unchanged)
+  let existingBrand = await BrandProfile.findOne({ 
+    ownerUserId: userId.toString(),
+    $or: [
+      { isAdminAnalysis: { $exists: false } },
+      { isAdminAnalysis: false }
+    ]
+  });
   
   if (existingBrand) {
     // User already has a brand - check if they're trying to analyze the same domain

@@ -26,25 +26,38 @@ const tokenLogger = new TokenCostLogger();
 exports.analyzeBrand = async (req, res) => {
   console.log("=== 🚀 Starting Brand Analysis ===");
   console.log("📋 Request body:", req.body);
-  const { domain, brandName } = req.body;
+  const { domain, brandName, isSuperUserAnalysis } = req.body;
   const userId = req.user.id;
+  const userRole = req.user.role;
 
   if (!domain) return res.status(400).json({ msg: "Domain is required" });
 
+  // Check if this is a super user analysis
+  const isSuperUser = userRole === 'superuser';
+  const isAdminAnalysis = isSuperUserAnalysis && isSuperUser;
+
+  console.log(`👤 User analysis type: ${isAdminAnalysis ? 'Super User Analysis' : 'Regular User Analysis'}`);
+  console.log(`🔑 User role: ${userRole}`);
+
   try {
     // ✅ Generate analysis session ID for this analysis
-    const analysisSessionId = `analysis_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const sessionPrefix = isAdminAnalysis ? 'superuser_analysis' : 'analysis';
+    const analysisSessionId = `${sessionPrefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     console.log(`🆔 Generated analysis session ID: ${analysisSessionId}`);
 
-    // Pre-validate domain analysis
-    const domainValidation = await canUserAnalyzeDomain(userId, domain);
-    console.log("🔍 Domain validation:", domainValidation);
-    
-    if (!domainValidation.canAnalyze) {
-      return res.status(400).json({ 
-        error: "Domain analysis not allowed", 
-        message: domainValidation.message 
-      });
+    // Pre-validate domain analysis (skip for super users)
+    if (!isAdminAnalysis) {
+      const domainValidation = await canUserAnalyzeDomain(userId, domain);
+      console.log("🔍 Domain validation:", domainValidation);
+      
+      if (!domainValidation.canAnalyze) {
+        return res.status(400).json({ 
+          error: "Domain analysis not allowed", 
+          message: domainValidation.message 
+        });
+      }
+    } else {
+      console.log("🔥 Super user analysis - skipping domain validation");
     }
 
     // Log analysis session start
@@ -53,8 +66,14 @@ exports.analyzeBrand = async (req, res) => {
 
     // 1. Create or find brand profile
     console.log("📝 Step 1: Creating/finding brand profile...");
-    const brand = await findOrCreateBrandProfile({ domain, brandName, userId });
-    console.log("✅ Brand profile ready:", brand.brandName);
+    const brand = await findOrCreateBrandProfile({ 
+      domain, 
+      brandName, 
+      userId,
+      isAdminAnalysis,
+      userRole 
+    });
+    console.log(`✅ Brand profile ready: ${brand.brandName} ${isAdminAnalysis ? '(Super User Analysis)' : '(Regular Analysis)'}`);
     
     // Log brand voice information if available
     if (brand.brandTonality || brand.brandInformation) {

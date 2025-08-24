@@ -7,6 +7,7 @@ import DomainAnalysis from './DomainAnalysis';
 import BlogAnalysis from './BlogAnalysis';
 import ContentCalendarView from './ContentCalendarView';
 import BrandSettings from '../components/BrandSettings';
+import SuperUserDomainAnalysis from '../components/SuperUserDomainAnalysis';
 
 import { apiService } from '../utils/api';
 import { getUserName, isSuperuser } from '../utils/auth';
@@ -344,6 +345,17 @@ const Dashboard = () => {
             <Settings className="w-4 h-4" />
             <span>Settings</span>
           </button>
+
+          {/* Super User Domain Analysis - Only visible to super users */}
+          {isUserSuperuser && (
+            <button
+              onClick={() => navigate('/super-user-analysis')}
+              className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20"
+            >
+              <Globe className="w-4 h-4" />
+              <span>Domain Analysis</span>
+            </button>
+          )}
         </nav>
 
         {/* Logout */}
@@ -840,6 +852,7 @@ const Dashboard = () => {
               </Card>
             </div>
           )}
+
         </main>
       </div>
     </div>

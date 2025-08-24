@@ -218,6 +218,72 @@ exports.getPromptResponse = async (req, res) => {
   }
 };
 
+// Super User: Get analysis history
+exports.getSuperUserHistory = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const userRole = req.user.role;
+
+    // Check if user is super user
+    if (userRole !== 'superuser') {
+      return res.status(403).json({
+        success: false,
+        msg: "Access denied. Super user privileges required."
+      });
+    }
+
+    console.log(`🔥 Getting super user analysis history for user: ${userId}`);
+
+    // Get all brand profiles created by this super user
+    const BrandProfile = require("../models/BrandProfile");
+    const BrandShareOfVoice = require("../models/BrandShareOfVoice");
+
+    const superUserBrands = await BrandProfile.find({
+      ownerUserId: userId.toString(),
+      isAdminAnalysis: true
+    }).sort({ createdAt: -1 });
+
+    console.log(`✅ Found ${superUserBrands.length} super user brand analyses`);
+
+    // Get SOV data for each brand
+    const analysisHistory = [];
+    for (const brand of superUserBrands) {
+      const sovData = await BrandShareOfVoice.findOne({
+        brandId: brand._id,
+        userId: userId.toString()
+      }).sort({ createdAt: -1 });
+
+      analysisHistory.push({
+        id: brand._id,
+        domain: brand.domain,
+        brandName: brand.brandName,
+        createdAt: brand.createdAt,
+        updatedAt: brand.updatedAt,
+        totalMentions: sovData?.totalMentions || 0,
+        brandShare: sovData?.brandShare || 0,
+        competitorsCount: sovData?.competitors?.length || 0,
+        aiVisibilityScore: sovData?.aiVisibilityScore || 0,
+        isAdminAnalysis: true
+      });
+    }
+
+    console.log(`✅ Compiled history for ${analysisHistory.length} analyses`);
+
+    res.json({
+      success: true,
+      analyses: analysisHistory,
+      count: analysisHistory.length
+    });
+
+  } catch (error) {
+    console.error("❌ Error getting super user history:", error);
+    res.status(500).json({
+      success: false,
+      msg: "Failed to retrieve analysis history"
+    });
+  }
+};
+
 // Debug endpoint to check AI responses in database
 exports.debugAIResponses = async (req, res) => {
   try {

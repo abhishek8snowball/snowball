@@ -5,6 +5,7 @@ import BlogEditor from "./pages/BlogEditor";
 import ShopifyIntegration from "./pages/ShopifyIntegration";
 import OnboardingFlow from "./components/OnboardingFlow";
 import DomainAnalysisDashboard from "./pages/DomainAnalysisDashboard";
+import SuperUserAnalysisPage from "./pages/SuperUserAnalysisPage";
 import { ToastContainer, toast } from 'react-toastify';
 import ErrorBoundary from './components/ErrorBoundary';
 
@@ -56,6 +57,10 @@ const router = createBrowserRouter([
       {
         path: "domain-analysis",
         element: <DomainAnalysisDashboard />,
+      },
+      {
+        path: "super-user-analysis",
+        element: <SuperUserAnalysisPage />,
       }
     ],
   },
