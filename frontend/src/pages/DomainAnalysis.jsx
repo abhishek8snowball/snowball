@@ -8,6 +8,7 @@ import ShareOfVoiceTable from "./ShareOfVoiceTable";
 
 import CompetitorsAnalysis from "./CompetitorsAnalysis";
 import CategoriesWithPrompts from "./CategoriesWithPrompts";
+import SOVTrendChart from "../components/SOVTrendChart";
 // Blog analysis moved to separate page
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
@@ -720,6 +721,11 @@ const DomainAnalysis = ({ onClose, initialDomain = "" }) => {
                 onDataUpdate={refreshSOVData}
               />
             </div>
+          </div>
+
+          {/* SOV Trends Chart - Full Width */}
+          <div className="mt-6">
+            <SOVTrendChart brandId={result.brandId} />
           </div>
 
           {/* Competitors Analysis - Full Width */}

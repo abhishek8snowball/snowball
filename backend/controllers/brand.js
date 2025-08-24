@@ -20,6 +20,281 @@ exports.extractBlogs = require("./brand/blogExtraction").extractBlogs;
 // Blog analysis trigger for domain analysis
 exports.triggerBlogAnalysis = require("./brand/blogAnalysis").triggerBlogAnalysis;
 
+// Get SOV trend data for chart
+exports.getSOVTrends = async (req, res) => {
+  try {
+    const { brandId } = req.params;
+    const userId = req.user.id;
+    
+    console.log(`📈 Fetching SOV trend data for brand: ${brandId}, user: ${userId}`);
+    
+    // Validate brand ownership
+    const { validateBrandOwnership } = require("../utils/brandValidation");
+    const brand = await validateBrandOwnership(userId, brandId);
+    
+    if (!brand) {
+      console.log(`❌ Brand ownership validation failed for user ${userId}, brand ${brandId}`);
+      return res.status(403).json({ msg: "Access denied: You don't have permission to access this brand's data" });
+    }
+
+    const BrandSOVSnapshot = require("../models/BrandSOVSnapshot");
+    
+    // Get all SOV snapshots for this brand, ordered by date
+    const sovSnapshots = await BrandSOVSnapshot.find({
+      brandId: brand._id,
+      userId: userId.toString()
+    })
+    .sort({ snapshotDate: 1 }) // Ascending order for chart
+    .select('snapshotDate sovData mentionCounts totalMentions brandShare aiVisibilityScore competitors triggerType')
+    .lean();
+
+    console.log(`📊 Found ${sovSnapshots.length} SOV snapshots for trend chart`);
+
+    // Transform data for chart consumption
+    const chartData = {
+      dates: [],
+      datasets: {}
+    };
+
+    // Process each snapshot
+    sovSnapshots.forEach(snapshot => {
+      const date = snapshot.snapshotDate;
+      chartData.dates.push(date);
+
+      // Process each brand/competitor in this snapshot
+      Object.entries(snapshot.sovData || {}).forEach(([brandName, percentage]) => {
+        if (!chartData.datasets[brandName]) {
+          chartData.datasets[brandName] = [];
+        }
+        chartData.datasets[brandName].push({
+          x: date,
+          y: percentage,
+          mentions: snapshot.mentionCounts[brandName] || 0,
+          triggerType: snapshot.triggerType
+        });
+      });
+    });
+
+    // Get unique brand names for legend
+    const brandNames = Object.keys(chartData.datasets);
+    
+    console.log(`📈 Chart data prepared:`, {
+      totalSnapshots: sovSnapshots.length,
+      dateRange: sovSnapshots.length > 0 ? {
+        from: sovSnapshots[0].snapshotDate,
+        to: sovSnapshots[sovSnapshots.length - 1].snapshotDate
+      } : null,
+      brandsTracked: brandNames
+    });
+
+    res.json({
+      success: true,
+      data: {
+        chartData,
+        brandNames,
+        totalSnapshots: sovSnapshots.length,
+        dateRange: sovSnapshots.length > 0 ? {
+          from: sovSnapshots[0].snapshotDate,
+          to: sovSnapshots[sovSnapshots.length - 1].snapshotDate
+        } : null
+      }
+    });
+
+  } catch (error) {
+    console.error("❌ Error fetching SOV trend data:", error);
+    res.status(500).json({ msg: "Failed to fetch SOV trend data", error: error.message });
+  }
+};
+
+// Rerun all prompts and recalculate SOV (Manual Update button)
+exports.rerunAnalysis = async (req, res) => {
+  try {
+    const { brandId } = req.params;
+    const userId = req.user.id;
+    
+    console.log(`🔄 Manual rerun analysis requested for brand: ${brandId}, user: ${userId}`);
+    
+    // Validate brand ownership
+    const { validateBrandOwnership } = require("../utils/brandValidation");
+    const brand = await validateBrandOwnership(userId, brandId);
+    
+    if (!brand) {
+      console.log(`❌ Brand ownership validation failed for user ${userId}, brand ${brandId}`);
+      return res.status(403).json({ msg: "Access denied: You don't have permission to rerun this brand's analysis" });
+    }
+
+    console.log(`✅ Brand validated: ${brand.brandName} (${brand.domain})`);
+
+    // Get all user's categories and prompts
+    const userCategories = await BrandCategory.find({ brandId: brand._id });
+    console.log(`📋 Found ${userCategories.length} categories`);
+
+    if (userCategories.length === 0) {
+      return res.status(400).json({ msg: "No categories found for this brand. Cannot rerun analysis." });
+    }
+
+    const userCategoryIds = userCategories.map(cat => cat._id);
+    
+    // Get all prompts (including custom ones)
+    const allPrompts = await CategorySearchPrompt.find({ 
+      categoryId: { $in: userCategoryIds },
+      brandId: brand._id
+    });
+    console.log(`📝 Found ${allPrompts.length} total prompts to rerun`);
+
+    if (allPrompts.length === 0) {
+      return res.status(400).json({ msg: "No prompts found for this brand. Cannot rerun analysis." });
+    }
+
+    // Initialize OpenAI
+    const OpenAI = require('openai');
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+    // Get or create analysis session for this rerun
+    const { getOrCreateAnalysisSession } = require("../utils/analysisSessionManager");
+    const analysisSessionId = await getOrCreateAnalysisSession(brand._id, userId);
+    console.log(`🆔 Analysis session ID: ${analysisSessionId}`);
+
+    let processedPrompts = 0;
+    let newResponsesGenerated = 0;
+
+    // Process each prompt
+    for (const prompt of allPrompts) {
+      const category = userCategories.find(cat => cat._id.toString() === prompt.categoryId.toString());
+      
+      if (!category) {
+        console.log(`⚠️ Category not found for prompt ${prompt._id}, skipping`);
+        continue;
+      }
+
+      console.log(`🤖 Rerunning prompt ${processedPrompts + 1}/${allPrompts.length}: "${prompt.promptText.substring(0, 80)}..."`);
+
+      try {
+        // Generate new AI response
+        const enhancedPrompt = `${prompt.promptText}
+
+IMPORTANT: In your response, make sure to explicitly mention the brand names that are referenced in the question. If the question asks about specific brands, include those brand names in your answer. Be specific and mention the actual brand names rather than using generic terms.`;
+
+        const aiResp = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [{ role: "user", content: enhancedPrompt }],
+          max_tokens: 500,
+        });
+
+        const responseContent = aiResp.choices[0].message.content;
+
+        // Save new AI response (this will create a new entry, not overwrite)
+        const newAiResponse = await PromptAIResponse.create({
+          promptId: prompt._id,
+          responseText: responseContent,
+          brandId: brand._id,
+          userId: userId,
+          analysisSessionId: analysisSessionId,
+          runAt: new Date()
+        });
+
+        console.log(`✅ New AI response generated and saved: ${newAiResponse._id}`);
+        newResponsesGenerated++;
+
+        // Extract mentions from the new response
+        const MentionExtractor = require('./brand/mentionExtractor');
+        const mentionExtractor = new MentionExtractor();
+        
+        await mentionExtractor.extractMentionsFromResponse(
+          responseContent,
+          prompt._id,
+          category._id,
+          brand._id,
+          userId,
+          newAiResponse._id,
+          analysisSessionId
+        );
+
+        console.log(`✅ Mentions extracted for prompt ${processedPrompts + 1}`);
+
+      } catch (promptError) {
+        console.error(`❌ Error processing prompt ${prompt._id}:`, promptError.message);
+        // Continue with other prompts
+      }
+
+      processedPrompts++;
+    }
+
+    console.log(`🎯 Rerun summary: ${processedPrompts} prompts processed, ${newResponsesGenerated} new responses generated`);
+
+    // Get all AI responses for SOV calculation (existing + new)
+    const userPromptIds = allPrompts.map(prompt => prompt._id);
+    const allAIResponses = await PromptAIResponse.find({ 
+      promptId: { $in: userPromptIds } 
+    }).populate('promptId');
+
+    // Build responses array for SOV calculation
+    const allResponses = [];
+    for (const response of allAIResponses) {
+      if (response.promptId) {
+        const categoryDoc = userCategories.find(cat => 
+          cat._id.toString() === response.promptId.categoryId.toString()
+        );
+        if (categoryDoc) {
+          allResponses.push({
+            aiDoc: response,
+            catDoc: categoryDoc
+          });
+        }
+      }
+    }
+
+    console.log(`📊 Recalculating SOV with ${allResponses.length} total responses (including new ones)`);
+
+    // Prepare brand object for SOV calculation
+    const brandForSOV = {
+      _id: brand._id,
+      brandName: brand.brandName,
+      domain: brand.domain,
+      userId: brand.ownerUserId,
+      ownerUserId: brand.ownerUserId,
+      competitors: brand.competitors || [],
+      triggerType: 'manual_rerun', // ✅ Set trigger type for SOV snapshot
+      totalPrompts: allPrompts.length,
+      totalCategories: userCategories.length,
+      customPromptsCount: allPrompts.filter(p => p.isCustom).length
+    };
+
+    // Recalculate SOV with all data
+    const { calculateShareOfVoice } = require('./brand/shareOfVoice');
+    const sovResult = await calculateShareOfVoice(
+      brandForSOV,
+      brandForSOV.competitors,
+      allResponses,
+      userCategories[0]._id,
+      analysisSessionId
+    );
+
+    console.log(`✅ Analysis rerun completed successfully`);
+    console.log(`📊 Updated SOV results:`, sovResult);
+
+    res.json({
+      success: true,
+      message: 'Analysis rerun completed successfully',
+      stats: {
+        totalPrompts: allPrompts.length,
+        processedPrompts: processedPrompts,
+        newResponsesGenerated: newResponsesGenerated,
+        totalResponses: allResponses.length,
+        analysisSessionId: analysisSessionId
+      },
+      sovResults: sovResult
+    });
+
+  } catch (error) {
+    console.error("❌ Error during analysis rerun:", error);
+    res.status(500).json({ 
+      msg: "Failed to rerun analysis", 
+      error: error.message 
+    });
+  }
+};
+
 // Create minimal brand profile for blog analysis (without full analysis)
 exports.createMinimalBrand = async (req, res) => {
   try {
@@ -577,7 +852,8 @@ exports.addCompetitor = async (req, res) => {
         domain: brand.domain,
         userId: brand.ownerUserId,
         ownerUserId: brand.ownerUserId,
-        competitors: brand.competitors // Now includes new competitor
+        competitors: brand.competitors, // Now includes new competitor
+        triggerType: 'custom_competitor' // ✅ Set trigger type for SOV snapshot
       };
 
       // Use consistent analysis session management for competitor addition
@@ -727,7 +1003,8 @@ exports.deleteCompetitor = async (req, res) => {
         domain: brand.domain,
         userId: brand.ownerUserId,
         ownerUserId: brand.ownerUserId,
-        competitors: brand.competitors // Now excludes deleted competitor
+        competitors: brand.competitors, // Now excludes deleted competitor
+        triggerType: 'competitor_deleted' // ✅ Set trigger type for SOV snapshot
       };
 
       // Use consistent analysis session management for competitor deletion
@@ -883,7 +1160,8 @@ exports.generateCustomResponse = async (req, res) => {
       domain: brand.domain,
       userId: brand.ownerUserId,
       ownerUserId: brand.ownerUserId,
-      competitors: brand.competitors || []
+      competitors: brand.competitors || [],
+      triggerType: 'custom_prompt' // ✅ Set trigger type for SOV snapshot
     };
 
     // Get user's categories first

@@ -54,6 +54,12 @@ router.post("/:brandId/competitors", auth, brandController.addCompetitor);
 // Delete competitor from brand
 router.delete("/:brandId/competitors/:competitorName", auth, brandController.deleteCompetitor);
 
+// SOV trend data for charts
+router.get("/:brandId/sov-trends", auth, brandController.getSOVTrends);
+
+// Manual rerun analysis button
+router.post("/:brandId/rerun-analysis", auth, brandController.rerunAnalysis);
+
 // Mention extraction and analysis endpoints
 router.post("/:brandId/mentions/process", auth, mentionController.processBrandMentions);
 router.get("/:brandId/mentions/companies", auth, mentionController.getUniqueCompanies);

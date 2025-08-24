@@ -391,6 +391,42 @@ exports.calculateShareOfVoice = async function(brand, competitors, aiResponses, 
       console.log("✅ Document ID:", savedShareOfVoice._id);
       console.log("✅ Analysis Session ID:", analysisSessionId);
       console.log("✅ Operation: Created fresh record");
+
+      // ✅ STEP 5: Save SOV Snapshot for trend tracking
+      try {
+        const BrandSOVSnapshot = require("../../models/BrandSOVSnapshot");
+        
+        // Determine trigger type based on context (default to manual_rerun if not specified)
+        const triggerType = brand.triggerType || 'manual_rerun';
+        
+        console.log(`📊 Saving SOV snapshot for trend tracking - Trigger: ${triggerType}`);
+        
+        const snapshotData = {
+          brandId: brand._id,
+          userId: brand.userId,
+          snapshotDate: new Date(),
+          sovData: shareOfVoice,
+          mentionCounts: mentionCounts,
+          totalMentions: totalMentions,
+          brandShare: brandShare,
+          aiVisibilityScore: aiVisibilityScore,
+          competitors: competitors,
+          triggerType: triggerType,
+          analysisSessionId: analysisSessionId,
+          metadata: {
+            totalPrompts: brand.totalPrompts || 0,
+            totalCategories: brand.totalCategories || 0,
+            customPromptsCount: brand.customPromptsCount || 0
+          }
+        };
+        
+        const sovSnapshot = await BrandSOVSnapshot.create(snapshotData);
+        console.log(`✅ SOV snapshot saved for trend tracking: ${sovSnapshot._id}`);
+        
+      } catch (snapshotError) {
+        console.error("❌ Error saving SOV snapshot:", snapshotError.message);
+        // Continue - snapshot failure shouldn't break SOV calculation
+      }
       
     } catch (saveError) {
       console.error("❌ Error upserting Share of Voice to database:", saveError.message);
