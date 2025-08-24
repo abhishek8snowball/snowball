@@ -9,7 +9,7 @@ import CompetitorsAnalysis from "../pages/CompetitorsAnalysis";
 import CategoriesWithPrompts from "../pages/CategoriesWithPrompts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
-import { RefreshCw, Crown } from 'lucide-react';
+import { RefreshCw, Crown, Download } from 'lucide-react';
 
 const SuperUserDomainAnalysis = ({ onAnalysisComplete }) => {
   const [domain, setDomain] = useState("");
@@ -19,6 +19,7 @@ const SuperUserDomainAnalysis = ({ onAnalysisComplete }) => {
   const [loadingTime, setLoadingTime] = useState(0);
   const [currentStep, setCurrentStep] = useState("");
   const [progressSteps, setProgressSteps] = useState([]);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   // Analysis steps for progress tracking
   const analysisSteps = [
@@ -117,6 +118,66 @@ const SuperUserDomainAnalysis = ({ onAnalysisComplete }) => {
     setCurrentStep("");
     setProgressSteps([]);
     setDomain("");
+  };
+
+  const downloadPDF = async () => {
+    if (!result || !result.brandId) {
+      toast.error("No analysis data available for PDF generation");
+      return;
+    }
+
+    try {
+      setDownloadingPdf(true);
+      console.log(`📄 Super User - Downloading PDF for brand: ${result.brand} (${result.brandId})`);
+
+      const token = localStorage.getItem('auth');
+      
+      const response = await fetch(`/api/v1/brand/${result.brandId}/download-pdf`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to download PDF');
+      }
+
+      // Create blob from response
+      const blob = await response.blob();
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Get filename from response headers or create one
+      const contentDisposition = response.headers.get('content-disposition');
+      let filename = `${result.brand.replace(/[^a-zA-Z0-9]/g, '_')}_Analysis.pdf`;
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+      
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      console.log(`✅ Super User - PDF downloaded: ${filename}`);
+      toast.success(`PDF report downloaded successfully!`);
+    } catch (err) {
+      console.error('❌ Super User - PDF download error:', err);
+      toast.error(`Failed to download PDF: ${err.message}`);
+    } finally {
+      setDownloadingPdf(false);
+    }
   };
 
   const formatTime = (seconds) => {
@@ -297,20 +358,39 @@ const SuperUserDomainAnalysis = ({ onAnalysisComplete }) => {
       {/* Results Display */}
       {result && !loading && (
         <div className="space-y-6">
-          {/* Header with Reset Button */}
+          {/* Header with PDF Download and Reset Button */}
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-xl font-semibold text-[#4a4a6a]">Analysis Results for {result.domain}</h3>
               <p className="text-sm text-[#4a4a6a]">Super User Analysis • Complete brand intelligence report</p>
             </div>
-            <Button
-              onClick={handleClose}
-              variant="outline"
-              className="border-[#b0b0d8] text-[#4a4a6a] hover:bg-[#d5d6eb]"
-            >
-              <RefreshCw className="w-4 h-4 mr-2" />
-              New Analysis
-            </Button>
+            <div className="flex items-center space-x-3">
+              <Button
+                onClick={downloadPDF}
+                disabled={downloadingPdf}
+                className="bg-green-600 hover:bg-green-700 text-white border-0"
+              >
+                {downloadingPdf ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4 mr-2" />
+                    Download PDF Report
+                  </>
+                )}
+              </Button>
+              <Button
+                onClick={handleClose}
+                variant="outline"
+                className="border-[#b0b0d8] text-[#4a4a6a] hover:bg-[#d5d6eb]"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                New Analysis
+              </Button>
+            </div>
           </div>
 
           {/* Brand Summary and SOV Cards */}

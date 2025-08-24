@@ -3,6 +3,7 @@ const router = express.Router();
 const { authenticationMiddleware: auth } = require("../middleware/auth");
 const brandController = require("../controllers/brand");
 const mentionController = require("../controllers/brand/mentionController");
+const pdfController = require("../controllers/brand/pdfController");
 
 // Brand analysis endpoints
 router.post("/analyze", auth, brandController.analyzeBrand);
@@ -27,7 +28,8 @@ router.post("/prompts/:promptId/generate", auth, brandController.generateCustomR
 router.get("/debug/ai-responses", auth, brandController.debugAIResponses);
 
 // Super User endpoints
-router.get("/super-user/history", auth, brandController.getSuperUserHistory);
+router.get("/super-user/history", auth, pdfController.getSuperUserAnalysisHistory);
+router.get("/:brandId/download-pdf", auth, pdfController.downloadBrandAnalysisPDF);
 
 // Blog analysis endpoints
 router.get("/:brandId/blogs", auth, brandController.getBlogAnalysis);

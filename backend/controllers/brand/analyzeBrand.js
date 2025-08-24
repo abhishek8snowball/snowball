@@ -46,8 +46,9 @@ exports.analyzeBrand = async (req, res) => {
     console.log(`🆔 Generated analysis session ID: ${analysisSessionId}`);
 
     // Pre-validate domain analysis (skip for super users)
+    let domainValidation = null;
     if (!isAdminAnalysis) {
-      const domainValidation = await canUserAnalyzeDomain(userId, domain);
+      domainValidation = await canUserAnalyzeDomain(userId, domain);
       console.log("🔍 Domain validation:", domainValidation);
       
       if (!domainValidation.canAnalyze) {
@@ -58,6 +59,7 @@ exports.analyzeBrand = async (req, res) => {
       }
     } else {
       console.log("🔥 Super user analysis - skipping domain validation");
+      domainValidation = { canAnalyze: true, message: "Super user analysis" };
     }
 
     // Log analysis session start

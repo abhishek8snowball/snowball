@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { 
   BarChart3, 
@@ -13,7 +13,8 @@ import {
   Building2,
   Crown,
   ArrowLeft,
-  History
+  History,
+  Download
 } from 'lucide-react';
 
 import SuperUserDomainAnalysis from '../components/SuperUserDomainAnalysis';
@@ -22,9 +23,10 @@ import { getUserName, isSuperuser } from '../utils/auth';
 
 const SuperUserAnalysisPage = () => {
   const navigate = useNavigate();
+  const { brandId } = useParams(); // Get brandId from URL if viewing specific analysis
   const [userName, setUserName] = useState(getUserName());
-  const [activeSection, setActiveSection] = useState('domain-analysis');
   const [analysisHistory, setAnalysisHistory] = useState([]);
+  const [viewingAnalysis, setViewingAnalysis] = useState(null);
 
   // Redirect non-super users
   useEffect(() => {
@@ -36,7 +38,12 @@ const SuperUserAnalysisPage = () => {
     
     // Load super user analysis history
     loadAnalysisHistory();
-  }, [navigate]);
+
+    // If brandId is provided, load specific analysis
+    if (brandId) {
+      loadSpecificAnalysis(brandId);
+    }
+  }, [navigate, brandId]);
 
   const loadAnalysisHistory = async () => {
     try {
@@ -46,6 +53,21 @@ const SuperUserAnalysisPage = () => {
     } catch (error) {
       console.log('No analysis history found or error loading:', error);
       setAnalysisHistory([]);
+    }
+  };
+
+  const loadSpecificAnalysis = async (brandId) => {
+    try {
+      console.log('🔍 Loading specific analysis for brandId:', brandId);
+      const response = await apiService.get(`/api/v1/brand/analysis/${brandId}`);
+      if (response.data.success) {
+        setViewingAnalysis(response.data);
+        console.log('✅ Loaded analysis:', response.data.brand);
+      }
+    } catch (error) {
+      console.error('❌ Error loading specific analysis:', error);
+      // If can't load specific analysis, redirect to main super user page
+      navigate('/super-user-analysis');
     }
   };
 
@@ -94,25 +116,14 @@ const SuperUserAnalysisPage = () => {
             <span>Back to Dashboard</span>
           </button>
 
-          <button
-            onClick={() => setActiveSection('domain-analysis')}
-            className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-              activeSection === 'domain-analysis'
-                ? 'bg-[#6658f4] text-white shadow-md'
-                : 'text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20'
-            }`}
-          >
+          <div className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium bg-[#6658f4] text-white shadow-md">
             <Globe className="w-4 h-4" />
             <span>Domain Analysis</span>
-          </button>
+          </div>
 
           <button
-            onClick={() => setActiveSection('history')}
-            className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-              activeSection === 'history'
-                ? 'bg-[#6658f4] text-white shadow-md'
-                : 'text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20'
-            }`}
+            onClick={() => navigate('/super-user-history')}
+            className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20"
           >
             <History className="w-4 h-4" />
             <span>Analysis History</span>
@@ -147,15 +158,8 @@ const SuperUserAnalysisPage = () => {
                 <Crown className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-[#4a4a6a]">
-                  {activeSection === 'domain-analysis' ? 'Domain Analysis' : 'Analysis History'}
-                </h1>
-                <p className="text-sm text-[#4a4a6a]">
-                  {activeSection === 'domain-analysis' 
-                    ? 'Analyze any domain and get comprehensive brand intelligence'
-                    : 'View all your previous domain analyses'
-                  }
-                </p>
+                <h1 className="text-2xl font-bold text-[#4a4a6a]">Domain Analysis</h1>
+                <p className="text-sm text-[#4a4a6a]">Analyze any domain and get comprehensive brand intelligence</p>
               </div>
             </div>
           </div>
@@ -163,76 +167,63 @@ const SuperUserAnalysisPage = () => {
 
         {/* Content */}
         <main className="flex-1 overflow-auto px-8 py-6">
-          {activeSection === 'domain-analysis' && (
-            <SuperUserDomainAnalysis onAnalysisComplete={loadAnalysisHistory} />
-          )}
-
-          {activeSection === 'history' && (
+          {viewingAnalysis ? (
             <div className="space-y-6">
-              {analysisHistory.length === 0 ? (
-                <div className="text-center py-12">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <History className="w-8 h-8 text-gray-400" />
+              {/* Back button */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-semibold text-[#4a4a6a]">Viewing Analysis: {viewingAnalysis.brand}</h3>
+                  <p className="text-sm text-[#4a4a6a]">Domain: {viewingAnalysis.domain}</p>
+                </div>
+                <Button
+                  onClick={() => {
+                    setViewingAnalysis(null);
+                    navigate('/super-user-analysis');
+                  }}
+                  variant="outline"
+                  className="border-[#b0b0d8] text-[#4a4a6a] hover:bg-[#d5d6eb]"
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back to Analysis
+                </Button>
+              </div>
+              
+              {/* Analysis results display */}
+              <div className="bg-white border border-[#b0b0d8] rounded-lg p-6">
+                <h4 className="text-lg font-semibold mb-4">Analysis Results</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-[#6658f4]">{Math.round(viewingAnalysis.aiVisibilityScore || 0)}%</div>
+                    <div className="text-sm text-[#4a4a6a]">AI Visibility</div>
                   </div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Analysis History</h3>
-                  <p className="text-gray-500 mb-4">You haven't run any domain analyses yet.</p>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-[#6658f4]">{Math.round(viewingAnalysis.brandShare || 0)}%</div>
+                    <div className="text-sm text-[#4a4a6a]">Brand Share</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-[#6658f4]">{viewingAnalysis.totalMentions || 0}</div>
+                    <div className="text-sm text-[#4a4a6a]">Total Mentions</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-[#6658f4]">{viewingAnalysis.competitors?.length || 0}</div>
+                    <div className="text-sm text-[#4a4a6a]">Competitors</div>
+                  </div>
+                </div>
+                
+                {/* PDF Download button */}
+                <div className="mt-6 text-center">
                   <Button
-                    onClick={() => setActiveSection('domain-analysis')}
-                    className="gradient-primary"
+                    onClick={() => window.open(`/api/v1/brand/${brandId}/download-pdf`, '_blank')}
+                    className="bg-green-600 hover:bg-green-700 text-white"
                   >
-                    <Globe className="w-4 h-4 mr-2" />
-                    Start First Analysis
+                    <Download className="w-4 h-4 mr-2" />
+                    Download PDF Report
                   </Button>
                 </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {analysisHistory.map((analysis, index) => (
-                    <div
-                      key={analysis.id || index}
-                      className="bg-white border border-[#b0b0d8] rounded-lg p-6 hover:shadow-lg transition-shadow cursor-pointer"
-                      onClick={() => {
-                        // Navigate to view this analysis
-                        navigate(`/super-user-analysis/${analysis.id}`);
-                      }}
-                    >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-8 h-8 bg-[#7c77ff] rounded-lg flex items-center justify-center">
-                            <Globe className="w-4 h-4 text-white" />
-                          </div>
-                          <div>
-                            <h4 className="font-medium text-[#4a4a6a]">{analysis.domain}</h4>
-                            <p className="text-xs text-gray-500">{formatDate(analysis.createdAt)}</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Total Mentions:</span>
-                          <span className="font-medium">{analysis.totalMentions || 0}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Competitors:</span>
-                          <span className="font-medium">{analysis.competitorsCount || 0}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Brand Share:</span>
-                          <span className="font-medium">{analysis.brandShare || 0}%</span>
-                        </div>
-                      </div>
-
-                      <div className="mt-4 pt-3 border-t border-gray-100">
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          <Crown className="w-3 h-3 mr-1" />
-                          Super User Analysis
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              </div>
             </div>
+          ) : (
+            <SuperUserDomainAnalysis onAnalysisComplete={loadAnalysisHistory} />
           )}
         </main>
       </div>

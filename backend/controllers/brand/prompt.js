@@ -137,7 +137,11 @@ Format: Output only a JSON array of 5 strings.`;
       for (const p of promptArr) {
         const promptText = typeof p === "string" ? p : p.query;
         console.log(`💾 Saving prompt: ${promptText.substring(0, 50)}...`);
-        const promptDoc = await CategorySearchPrompt.create({ categoryId: catDoc._id, promptText });
+        const promptDoc = await CategorySearchPrompt.create({ 
+          categoryId: catDoc._id, 
+          brandId: brand._id,
+          promptText 
+        });
         prompts.push({ promptDoc, catDoc });
         console.log("✅ CategorySearchPrompt created:", promptDoc._id);
       }
